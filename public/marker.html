@@ -217,17 +217,17 @@
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
           <span style="font-size:11px;color:#94a3b8;">底色模式:</span>
           <select id="theme-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;">
-            <option value="light">浅色纸张 / 白底报纸 (Light)</option>
-            <option value="dark" selected>暗黑模式 / 纯黑推特 (Dark)</option>
+            <option value="light" selected>浅色纸张 / 白底报纸 (Light)</option>
+            <option value="dark">暗黑模式 / 纯黑推特 (Dark)</option>
           </select>
         </div>
 
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;color:#94a3b8;">背景质感:</span>
           <select id="bg-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;cursor:pointer;">
-            <option value="grid" selected>科技工业微网格 (Dark Tech Grid)</option>
+            <option value="noise" selected>胶片杂色噪点 (Film Grain Noise)</option>
+            <option value="grid">科技工业微网格 (Dark Tech Grid)</option>
             <option value="blueprint">深蓝工程蓝图 (Blueprint)</option>
-            <option value="noise">胶片杂色噪点 (Film Grain Noise)</option>
             <option value="paper">复古报纸底纹 (Vintage Paper)</option>
             <option value="vignette">电影暗角微光 (Radial Glow)</option>
             <option value="pure">极简纯黑 (Pure Minimal)</option>
@@ -238,8 +238,8 @@
           <span style="font-size:11px;color:#94a3b8;">节奏预设:</span>
           <select id="pace-select" style="flex:1;background:#0f172a;color:#38bdf8;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;font-weight:600;outline:none;cursor:pointer;">
             <option value="35">紧凑短视频 (35帧 / 1.1s)</option>
-            <option value="45" selected>VOX 原版经典 (45帧 / 1.5s)</option>
-            <option value="60">标准从容 (60帧 / 2.0s)</option>
+            <option value="45">VOX 原版经典 (45帧 / 1.5s)</option>
+            <option value="60" selected>标准从容 (60帧 / 2.0s)</option>
             <option value="90">慢速口播 (90帧 / 3.0s)</option>
           </select>
         </div>
@@ -304,7 +304,7 @@
 
 <script>
 let currentTab = 'vox'; // 'vox' | 'tech'
-let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'dark', curBgType = 'grid', anns = [], techCallouts = [], drawing = null, idSeq = 1;
+let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'light', curBgType = 'noise', anns = [], techCallouts = [], drawing = null, idSeq = 1;
 let currentImgElement = null;
 let uploadedDataUrl = '';
 let uploadedFileName = 'custom-image.png';
@@ -318,7 +318,7 @@ const DARK_COLORS = {
   circle: '#60a5fa', highlight: '#fde047', underline: '#f87171', wavy: '#fb7185',
   arrow: '#38bdf8', cross: '#ef4444', 'box-tool': '#38bdf8', focus: '#c084fc'
 };
-let COLORS = DARK_COLORS;
+let COLORS = LIGHT_COLORS;
 
 // 模板切换
 document.querySelectorAll('.tab-btn:not(.disabled)').forEach(btn => {
@@ -572,11 +572,11 @@ wrap.onmousedown = (e) => {
   };
 };
 
-let paceInterval = 45;
+let paceInterval = 60;
 const paceSelect = document.getElementById('pace-select');
 if (paceSelect) {
   paceSelect.onchange = (e) => {
-    paceInterval = parseInt(e.target.value) || 45;
+    paceInterval = parseInt(e.target.value) || 60;
     // 自动按新节奏重新等距排布已有标注
     if (anns.length > 0) {
       anns.sort((a, b) => a.at - b.at);
