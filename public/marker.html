@@ -419,6 +419,7 @@ function toast(msg) {
 }
 
 function loadImgFromSrc(src, fileName = 'custom-image.png') {
+  if (!src) src = 'screenshots/hockey-page.png';
   const img = new Image();
   img.onload = () => {
     imgW = img.naturalWidth;
@@ -437,7 +438,20 @@ function loadImgFromSrc(src, fileName = 'custom-image.png') {
     };
     fit();
     window.onresize = fit;
-    toast(`已载入图片: ${imgW}×${imgH}`);
+    toast(`已载入底图: ${imgW}×${imgH}`);
+  };
+  img.onerror = () => {
+    console.error('Failed to load image, trying fallback:', src);
+    if (!src.startsWith('data:') && !src.startsWith('http')) {
+      const prefix = window.location.pathname.startsWith('/vox') ? '/vox/' : '/';
+      const cleanPath = src.replace(/^\/+/, '');
+      const fallbackSrc = prefix + cleanPath;
+      if (img.src !== fallbackSrc && img.src !== window.location.origin + fallbackSrc) {
+        img.src = fallbackSrc;
+        return;
+      }
+    }
+    toast('图片载入失败，请重新输入路径或拖入上传');
   };
   img.src = src;
 }
@@ -1132,11 +1146,9 @@ async function autoLoadSavedData() {
           document.getElementById('bg-select').value = curBgType;
           updateStageBackground();
         }
-        if (data.image) {
-          loadImgFromSrc(data.image);
-        } else {
-          loadImgFromSrc('screenshots/hockey-page.png');
-        }
+        const imgToLoad = data.image || 'screenshots/hockey-page.png';
+        document.getElementById('img-path').value = imgToLoad.startsWith('data:') ? '' : imgToLoad;
+        loadImgFromSrc(imgToLoad);
         renderBoxes();
         renderList();
         toast('已自动加载最新标注项目');
@@ -1146,6 +1158,7 @@ async function autoLoadSavedData() {
   } catch (e) {
     console.log('No saved data to load:', e);
   }
+  document.getElementById('img-path').value = 'screenshots/hockey-page.png';
   loadImgFromSrc('screenshots/hockey-page.png');
 }
 
