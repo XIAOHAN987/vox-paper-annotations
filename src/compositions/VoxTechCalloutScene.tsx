@@ -61,7 +61,7 @@ export const calculateTechMetadata: CalculateMetadataFunction<VoxTechSceneProps>
 
   const callouts = scriptData.callouts ?? current.callouts ?? [];
   const maxAt = callouts.length ? Math.max(...callouts.map((c) => c.at)) : 0;
-  const durationInFrames = Math.max(300, maxAt + 80);
+  const durationInFrames = Math.max(90, maxAt + 40);
 
   return { durationInFrames };
 };

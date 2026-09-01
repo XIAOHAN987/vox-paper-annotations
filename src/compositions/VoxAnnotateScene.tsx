@@ -128,8 +128,8 @@ export const calculateVoxMetadata: CalculateMetadataFunction<VoxAnnotateProps> =
   const maxFocusFrame = focus ? (focus.until ?? focus.at + 70) : 0;
   const maxAt = Math.max(maxAnnFrame, maxFocusFrame);
 
-  // 基础 300 帧（10秒），若标注超出则自动扩展为 maxAt + 60 帧（留出 2 秒全景淡出收尾）
-  const durationInFrames = Math.max(300, maxAt + 60);
+  // 紧凑自适应时长: 基础 90 帧（3秒），若标注超出则在最后一个标注结束后留出 32 帧（约 1 秒）自然从容收尾
+  const durationInFrames = Math.max(90, maxAt + 32);
 
   return {
     durationInFrames,
@@ -202,11 +202,11 @@ const autoCameraKeys = (
     const prevX = keys[keys.length - 1]?.x ?? (imgW / 2);
     const prevY = keys[keys.length - 1]?.y ?? (imgH * 0.35);
     const dist = Math.hypot(ev.cx - prevX, ev.cy - prevY);
-    // 根据空间位移距离自适应分配 24~36 帧滑行时间
-    const travelFrames = Math.max(24, Math.min(36, Math.round(dist / 24)));
+    // 根据空间位移距离自适应分配 18~28 帧滑行时间
+    const travelFrames = Math.max(18, Math.min(28, Math.round(dist / 28)));
 
     // 镜头就位时间
-    const targetArrive = Math.max(currentFrame + travelFrames, ev.at - 6);
+    const targetArrive = Math.max(currentFrame + travelFrames, ev.at - 5);
     keys.push({
       at: Math.max(1, targetArrive),
       x: ev.cx,
@@ -216,23 +216,23 @@ const autoCameraKeys = (
 
     // 停留与慢速微推(Ken Burns 漂移: 聚焦时推 5%, 普通推 3%)
     const nextEv = events[i + 1];
-    const nextStart = nextEv ? nextEv.at : totalFrames - 40;
-    const holdDuration = Math.max(20, Math.min(50, nextStart - targetArrive - 24));
+    const nextStart = nextEv ? nextEv.at : totalFrames - 24;
+    const holdDuration = Math.max(16, Math.min(45, nextStart - targetArrive - 18));
     const holdEnd = targetArrive + holdDuration;
     const driftScale = ev.isFocus ? 1.05 : 1.03;
 
     keys.push({
       at: holdEnd,
       x: ev.cx,
-      y: ev.cy + (ev.isFocus ? 14 : 10),
+      y: ev.cy + (ev.isFocus ? 12 : 8),
       zoom: idealZoom * driftScale,
     });
 
     currentFrame = holdEnd;
   });
 
-  // 片尾平滑拉回全景
-  const endPullStart = Math.min(totalFrames - 35, Math.max(currentFrame + 8, totalFrames - 45));
+  // 片尾紧凑平滑拉回全景收尾 (用 22 帧干净利落回弹)
+  const endPullStart = Math.max(currentFrame + 4, totalFrames - 24);
   if (endPullStart > currentFrame) {
     keys.push({
       at: endPullStart,
@@ -246,7 +246,7 @@ const autoCameraKeys = (
     at: totalFrames,
     x: imgW / 2,
     y: imgH * 0.45,
-    zoom: 0.82,
+    zoom: 0.85,
   });
 
   // 去重并按帧单调递增过滤
