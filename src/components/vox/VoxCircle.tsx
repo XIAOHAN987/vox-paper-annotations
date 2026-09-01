@@ -119,7 +119,7 @@ export const VoxCircle: React.FC<VoxCircleProps> = ({
       const rx = w / 2 + strokeWidth * 1.8;
       const ry = h / 2 + strokeWidth * 1.6;
       const STEPS = 20;
-      let startAngle = -Math.PI / 2;
+      const startAngle = -Math.PI / 2;
       const pts: [number, number][] = [];
       for (let i = 0; i <= STEPS; i++) {
         const a = startAngle + (i / (STEPS - 3)) * Math.PI * 2;
@@ -137,7 +137,7 @@ export const VoxCircle: React.FC<VoxCircleProps> = ({
     }
 
     return { d: path, length: totalLength };
-  }, [rect, strokeWidth, loops]);
+  }, [rect, strokeWidth]);
 
   if (localFrame < 0) return null;
 
