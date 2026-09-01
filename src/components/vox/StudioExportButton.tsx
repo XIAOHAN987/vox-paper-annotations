@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { VoxAnnotateProps } from "../../compositions/VoxAnnotateScene";
 
 interface Props {
@@ -21,9 +21,10 @@ export const StudioExportButton: React.FC<Props> = ({ props, durationInFrames })
       setStatusMsg("正在连接 Remotion 工业级渲染引擎...");
 
       // 1. 先保存最新标注数据确保渲染与当前画面一致
-      const prefix = typeof window !== "undefined" && window.location.pathname.startsWith("/vox") ? "/vox" : "";
+      const isLocalStudio = typeof window !== "undefined" && window.location.port === "3000";
+      const apiBase = isLocalStudio ? "http://localhost:3008" : "/vox";
       try {
-        await fetch(`${prefix}/api/save`, {
+        await fetch(`${apiBase}/api/save`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -34,7 +35,7 @@ export const StudioExportButton: React.FC<Props> = ({ props, durationInFrames })
       } catch (_) {}
 
       // 2. 触发原生 Remotion SSE 渲染流
-      const renderApiUrl = `${prefix}/api/render`;
+      const renderApiUrl = `${apiBase}/api/render`;
       const eventSource = new EventSource(renderApiUrl);
 
       eventSource.addEventListener("status", (ev: any) => {
