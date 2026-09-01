@@ -398,9 +398,92 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
     return <AbsoluteFill style={{ backgroundColor: "#111" }} />;
   }
 
+  const bgType = data.bgType ?? (data.theme === "light" ? "paper" : "grid");
+
   return (
     <VoxFilterProvider boilFps={12}>
-      <AbsoluteFill style={{ backgroundColor: "#111", overflow: "hidden" }}>
+      <AbsoluteFill style={{ backgroundColor: "#08090d", overflow: "hidden" }}>
+        {/* 背景质感层 */}
+        {bgType === "grid" && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(circle at 50% 45%, rgba(30, 41, 59, 0.5) 0%, rgba(9, 10, 15, 0.95) 100%), linear-gradient(to right, rgba(51, 65, 85, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(51, 65, 85, 0.22) 1px, transparent 1px)",
+              backgroundSize: "100% 100%, 48px 48px, 48px 48px",
+            }}
+          />
+        )}
+
+        {bgType === "blueprint" && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "#081b33",
+              backgroundImage:
+                "linear-gradient(to right, rgba(56, 189, 248, 0.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(56, 189, 248, 0.16) 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+            }}
+          />
+        )}
+
+        {bgType === "noise" && (
+          <div style={{ position: "absolute", inset: 0, background: "#0c0d12" }}>
+            <Img
+              src={staticFile("textures/grain.jpg")}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.35,
+                mixBlendMode: "screen",
+              }}
+            />
+          </div>
+        )}
+
+        {bgType === "paper" && (
+          <div style={{ position: "absolute", inset: 0, background: "#f2ece1" }}>
+            <Img
+              src={staticFile("textures/newspaper.jpg")}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.75,
+                mixBlendMode: "multiply",
+              }}
+            />
+          </div>
+        )}
+
+        {bgType === "vignette" && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(circle at 50% 50%, #1e2536 0%, #06070a 100%)",
+            }}
+          />
+        )}
+
+        {bgType === "custom" && data.bgCustomUrl && (
+          <div style={{ position: "absolute", inset: 0 }}>
+            <Img
+              src={
+                data.bgCustomUrl.startsWith("http") ||
+                data.bgCustomUrl.startsWith("data:")
+                  ? data.bgCustomUrl
+                  : staticFile(data.bgCustomUrl)
+              }
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          </div>
+        )}
+
         {/* 相机层: 底图 + 批注 */}
         <div
           style={{

@@ -20,6 +20,10 @@ export interface BaseVoxProps {
   blendMode?: "normal" | "multiply" | "screen";
   /** 明暗主题: light(白底纸张), dark(黑底暗黑模式), auto */
   theme?: "light" | "dark" | "auto";
+  /** 背景质感: grid(科技网格), noise(胶片杂色), paper(复古纸张), blueprint(工程蓝图), vignette(暗角微光), pure(纯黑) */
+  bgType?: "grid" | "noise" | "paper" | "blueprint" | "vignette" | "pure" | "custom";
+  /** 自定义背景图/视频 URL */
+  bgCustomUrl?: string;
 }
 
 export interface VoxUnderlineProps extends BaseVoxProps {

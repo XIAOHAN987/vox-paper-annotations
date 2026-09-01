@@ -150,11 +150,23 @@
         <button class="btn-primary" id="btn-load">加载</button>
       </div>
 
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="font-size:11px;color:#94a3b8;">底色模式:</span>
         <select id="theme-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;">
           <option value="light">浅色纸张 / 白底报纸 (Light)</option>
-          <option value="dark">暗黑模式 / 纯黑推特 (Dark)</option>
+          <option value="dark" selected>暗黑模式 / 纯黑推特 (Dark)</option>
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:#94a3b8;">背景质感:</span>
+        <select id="bg-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;cursor:pointer;">
+          <option value="grid" selected>科技工业微网格 (Dark Tech Grid)</option>
+          <option value="blueprint">深蓝工程蓝图 (Blueprint)</option>
+          <option value="noise">胶片杂色噪点 (Film Grain Noise)</option>
+          <option value="paper">复古报纸底纹 (Vintage Paper)</option>
+          <option value="vignette">电影暗角微光 (Radial Glow)</option>
+          <option value="pure">极简纯黑 (Pure Minimal)</option>
         </select>
       </div>
     </header>
@@ -212,7 +224,7 @@
   <div id="toast">已复制</div>
 
 <script>
-let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'light', anns = [], drawing = null, idSeq = 1;
+let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'dark', curBgType = 'grid', anns = [], drawing = null, idSeq = 1;
 let currentImgElement = null;
 let uploadedDataUrl = '';
 let uploadedFileName = 'custom-image.png';
@@ -226,7 +238,7 @@ const DARK_COLORS = {
   circle: '#60a5fa', highlight: '#fde047', underline: '#f87171', wavy: '#fb7185',
   arrow: '#38bdf8', cross: '#ef4444', 'box-tool': '#38bdf8', focus: '#c084fc'
 };
-let COLORS = LIGHT_COLORS;
+let COLORS = DARK_COLORS;
 
 // 主题切换
 document.getElementById('theme-select').onchange = (e) => {
@@ -235,6 +247,38 @@ document.getElementById('theme-select').onchange = (e) => {
   renderBoxes();
   renderList();
 };
+
+// 背景质感切换
+document.getElementById('bg-select').onchange = (e) => {
+  curBgType = e.target.value;
+  updateStageBackground();
+};
+
+function updateStageBackground() {
+  const stage = document.getElementById('stage');
+  if (curBgType === 'grid') {
+    stage.style.background = 'radial-gradient(circle at 50% 45%, #181d2a 0%, #090a0f 100%)';
+    stage.style.backgroundImage = 'radial-gradient(circle at 50% 45%, rgba(30, 41, 59, 0.5) 0%, rgba(9, 10, 15, 0.95) 100%), linear-gradient(to right, rgba(51, 65, 85, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(51, 65, 85, 0.22) 1px, transparent 1px)';
+    stage.style.backgroundSize = '100% 100%, 48px 48px, 48px 48px';
+  } else if (curBgType === 'blueprint') {
+    stage.style.background = '#081b33';
+    stage.style.backgroundImage = 'linear-gradient(to right, rgba(56, 189, 248, 0.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(56, 189, 248, 0.16) 1px, transparent 1px)';
+    stage.style.backgroundSize = '32px 32px';
+  } else if (curBgType === 'noise') {
+    stage.style.background = '#0c0d12';
+    stage.style.backgroundImage = 'none';
+  } else if (curBgType === 'paper') {
+    stage.style.background = '#f2ece1';
+    stage.style.backgroundImage = 'none';
+  } else if (curBgType === 'vignette') {
+    stage.style.background = 'radial-gradient(circle at 50% 50%, #1e2536 0%, #06070a 100%)';
+    stage.style.backgroundImage = 'none';
+  } else {
+    stage.style.background = '#0a0b0e';
+    stage.style.backgroundImage = 'none';
+  }
+}
+updateStageBackground();
 
 // 按钮类型切换
 const typeBtns = document.querySelectorAll('#type-row button');
@@ -420,6 +464,7 @@ function buildJSON() {
     durationInFrames: totalFrames,
     grainOpacity: curTheme === 'dark' ? 0.12 : 0.25,
     theme: curTheme,
+    bgType: curBgType,
     cameraMode: "auto",
     annotations: normal.map(({ action, at, target }) => ({ action, at, target })),
     focus: focus ? { at: focus.at, until: focus.at + 70, target: focus.target, dimOpacity: 0.68 } : undefined
@@ -529,8 +574,48 @@ function renderFrame(frame) {
   const totalFrames = parseInt(seek.max);
   timeEl.textContent = `${(frame / 30).toFixed(1)}s / ${(totalFrames / 30).toFixed(1)}s`;
 
-  ctx.fillStyle = curTheme === 'dark' ? '#0a0b0e' : '#111';
-  ctx.fillRect(0, 0, 1920, 1080);
+  // 绘制背景质感
+  if (curBgType === 'grid') {
+    const bgGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1000);
+    bgGrad.addColorStop(0, '#1a2233');
+    bgGrad.addColorStop(1, '#08090d');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1920, 1080);
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.28)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= 1920; x += 48) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1080); ctx.stroke();
+    }
+    for (let y = 0; y <= 1080; y += 48) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1920, y); ctx.stroke();
+    }
+  } else if (curBgType === 'blueprint') {
+    ctx.fillStyle = '#081b33';
+    ctx.fillRect(0, 0, 1920, 1080);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= 1920; x += 32) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1080); ctx.stroke();
+    }
+    for (let y = 0; y <= 1080; y += 32) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1920, y); ctx.stroke();
+    }
+  } else if (curBgType === 'vignette') {
+    const bgGrad = ctx.createRadialGradient(960, 540, 80, 960, 540, 1000);
+    bgGrad.addColorStop(0, '#1e2536');
+    bgGrad.addColorStop(1, '#06070a');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1920, 1080);
+  } else if (curBgType === 'paper') {
+    ctx.fillStyle = '#f2ece1';
+    ctx.fillRect(0, 0, 1920, 1080);
+  } else if (curBgType === 'noise') {
+    ctx.fillStyle = '#0d0f14';
+    ctx.fillRect(0, 0, 1920, 1080);
+  } else {
+    ctx.fillStyle = '#0a0b0e';
+    ctx.fillRect(0, 0, 1920, 1080);
+  }
 
   if (!currentImgElement) return;
 
