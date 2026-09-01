@@ -35,39 +35,90 @@ export const VoxCircle: React.FC<VoxCircleProps> = ({
   const { d, length } = useMemo(() => {
     const cx = rect.x + rect.width / 2;
     const cy = rect.y + rect.height / 2;
-    // 手绘椭圆略大于目标, 留白呼吸
-    const rx = rect.width / 2 + strokeWidth * 1.6;
-    const ry = rect.height / 2 + strokeWidth * 1.4;
+    const w = rect.width;
+    const h = rect.height;
+    const isWide = w / Math.max(1, h) > 1.4;
 
     const pseudo = (i: number) => {
       const s = Math.sin(i * 269.5 + 183.3) * 28001.8384;
       return (s - Math.floor(s)) * 2 - 1;
     };
 
-    // 用 16 段贝塞尔逼近带抖动的椭圆, 多圈时逐圈半径微缩
-    const STEPS = 16;
     let path = "";
-    for (let loop = 0; loop < loops; loop++) {
-      const shrink = 1 - loop * 0.06;
-      const startAngle = -Math.PI / 2 + loop * 0.5;
-      for (let i = 0; i < STEPS; i++) {
-        const a0 = startAngle + (i / STEPS) * Math.PI * 2;
-        const a1 = startAngle + ((i + 1) / STEPS) * Math.PI * 2;
-        const w0 = pseudo(i + loop * 31) * strokeWidth * 0.55;
-        const w1 = pseudo(i + 1 + loop * 31) * strokeWidth * 0.55;
-        const x0 = cx + Math.cos(a0) * (rx * shrink + w0);
-        const y0 = cy + Math.sin(a0) * (ry * shrink + w0);
-        const x1 = cx + Math.cos(a1) * (rx * shrink + w1);
-        const y1 = cy + Math.sin(a1) * (ry * shrink + w1);
-        const mx = (x0 + x1) / 2 + pseudo(i + 7) * strokeWidth * 0.4;
-        const my = (y0 + y1) / 2 + pseudo(i + 13) * strokeWidth * 0.4;
-        path += i === 0 ? `M ${x0} ${y0} Q ${mx} ${my} ${x1} ${y1}` : ` Q ${mx} ${my} ${x1} ${y1}`;
+    let totalLength = 0;
+
+    if (isWide) {
+      // 针对宽幅文本(如整行文字圈选): 采用圆头胶囊椭圆(Stadium Oval), 左右两端保持完美圆弧, 绝不出现尖头橄榄形
+      const r = h / 2 + strokeWidth * 1.5;
+      const xLeft = rect.x - strokeWidth * 0.8;
+      const xRight = rect.x + w + strokeWidth * 0.8;
+      const topY = cy - r;
+      const botY = cy + r;
+
+      const STEPS = 24;
+      const pts: [number, number][] = [];
+
+      // 上横线 (从左到右)
+      for (let i = 0; i <= 6; i++) {
+        const t = i / 6;
+        const px = xLeft + r + (xRight - xLeft - 2 * r) * t;
+        const py = topY + pseudo(i) * strokeWidth * 0.35;
+        pts.push([px, py]);
       }
+
+      // 右半圆弧 (圆润自然, 不尖锐)
+      for (let i = 1; i <= 6; i++) {
+        const a = -Math.PI / 2 + (i / 6) * Math.PI;
+        const px = xRight - r + Math.cos(a) * (r + pseudo(i + 10) * strokeWidth * 0.3);
+        const py = cy + Math.sin(a) * (r + pseudo(i + 10) * strokeWidth * 0.3);
+        pts.push([px, py]);
+      }
+
+      // 下横线 (从右到左)
+      for (let i = 1; i <= 6; i++) {
+        const t = i / 6;
+        const px = xRight - r - (xRight - xLeft - 2 * r) * t;
+        const py = botY + pseudo(i + 20) * strokeWidth * 0.35;
+        pts.push([px, py]);
+      }
+
+      // 左半圆弧 (圆润收口, 略带自然搭接)
+      for (let i = 1; i <= 7; i++) {
+        const a = Math.PI / 2 + (i / 6) * Math.PI;
+        const px = xLeft + r + Math.cos(a) * (r + pseudo(i + 30) * strokeWidth * 0.3);
+        const py = cy + Math.sin(a) * (r + pseudo(i + 30) * strokeWidth * 0.3);
+        pts.push([px, py]);
+      }
+
+      path = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const mx = (prev[0] + curr[0]) / 2 + pseudo(i + 5) * strokeWidth * 0.2;
+        const my = (prev[1] + curr[1]) / 2 + pseudo(i + 7) * strokeWidth * 0.2;
+        path += ` Q ${mx.toFixed(1)} ${my.toFixed(1)} ${curr[0].toFixed(1)} ${curr[1].toFixed(1)}`;
+      }
+      totalLength = (w + h * Math.PI) * 1.35;
+    } else {
+      // 标准手绘椭圆
+      const rx = w / 2 + strokeWidth * 1.8;
+      const ry = h / 2 + strokeWidth * 1.6;
+      const STEPS = 18;
+      let startAngle = -Math.PI / 2;
+      for (let i = 0; i <= STEPS; i++) {
+        const a = startAngle + (i / (STEPS - 2)) * Math.PI * 2;
+        const wVal = pseudo(i) * strokeWidth * 0.4;
+        const px = cx + Math.cos(a) * (rx + wVal);
+        const py = cy + Math.sin(a) * (ry + wVal);
+        if (i === 0) path += `M ${px.toFixed(1)} ${py.toFixed(1)}`;
+        else {
+          path += ` L ${px.toFixed(1)} ${py.toFixed(1)}`;
+        }
+      }
+      totalLength = Math.PI * 2 * Math.sqrt((rx * rx + ry * ry) / 2) * 1.25;
     }
-    // 估算周长
-    const perimeter =
-      loops * Math.PI * 2 * Math.sqrt((rx * rx + ry * ry) / 2) * 1.15;
-    return { d: path, length: perimeter };
+
+    return { d: path, length: totalLength };
   }, [rect, strokeWidth, loops]);
 
   if (localFrame < 0) return null;

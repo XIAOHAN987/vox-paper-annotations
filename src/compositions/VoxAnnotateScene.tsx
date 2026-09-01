@@ -621,7 +621,8 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
                   strokeWidth={strokeBase}
                   delayInFrames={a.at}
                   durationInFrames={dur}
-                  headSize={strokeBase * 3}
+                  headSize={Math.max(28, strokeBase * 4.5)}
+                  headAngle={36}
                   theme={data.theme}
                 />
               );
