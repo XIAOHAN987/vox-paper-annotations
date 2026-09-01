@@ -12,11 +12,14 @@
     display: flex; height: 100vh; overflow: hidden;
   }
   #stage {
-    flex: 1; height: 100vh; overflow: auto; position: relative;
-    background: #090a0f; display: flex; align-items: center; justify-content: center;
+    flex: 1; height: 100vh; overflow-y: auto; overflow-x: auto; position: relative;
+    background: #090a0f; padding: 40px 20px; text-align: center;
     border-right: 1px solid #1e293b; user-select: none;
   }
-  #canvas-wrap { position: relative; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+  #canvas-wrap {
+    position: relative; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    margin: 0 auto; text-align: left;
+  }
   #canvas-wrap img { display: block; max-width: none; pointer-events: none; }
   .box {
     position: absolute; border: 2px dashed #38bdf8; background: rgba(56, 189, 248, 0.15);
@@ -186,10 +189,8 @@
 
     <div id="actions">
       <div class="row">
-        <button id="btn-preview">▶ 在线实时动效预览 (60fps)</button>
-      </div>
-      <div class="row">
-        <button id="btn-save">保存为独立脚本 (.json)</button>
+        <button id="btn-save-project" style="background:#16a34a;color:#fff;font-size:13px;font-weight:700;">保存到项目 (直接生效)</button>
+        <button id="btn-preview" style="background:#0284c7;color:#fff;">▶ 实时预览 (60fps)</button>
       </div>
       <div class="row">
         <button id="btn-copy">复制 JSON 数据</button>
@@ -471,21 +472,52 @@ function buildJSON() {
   };
 }
 
-// 导出与保存
+const saveToProject = async (rel, content) => {
+  try {
+    const res = await fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: rel, content: JSON.parse(content) }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (_) {}
+  throw new Error('no-api');
+};
+
+// 一键保存到项目 (本地直接写入，云端自动下载)
+document.getElementById('btn-save-project').onclick = async () => {
+  const jsonStr = JSON.stringify(buildJSON(), null, 2);
+  try {
+    await saveToProject('scripts/vox-script.json', jsonStr);
+    toast('✔ 已直接保存到项目: public/scripts/vox-script.json');
+  } catch (_) {
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `vox-script.json`;
+    a.click();
+    toast('已生成 vox-script.json 下载');
+  }
+};
+
+// 复制与下载
 document.getElementById('btn-copy').onclick = async () => {
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
   await navigator.clipboard.writeText(jsonStr);
   toast('已复制 JSON 到剪贴板');
 };
 
-document.getElementById('btn-download').onclick = document.getElementById('btn-save').onclick = () => {
+document.getElementById('btn-download').onclick = () => {
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `vox-script-${Date.now()}.json`;
   a.click();
-  toast('已成功导出完整自包含 JSON 文件');
+  toast('已下载独立 JSON 文件');
 };
 
 // -------------------------------------------------------------
