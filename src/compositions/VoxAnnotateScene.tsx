@@ -186,73 +186,79 @@ const autoCameraKeys = (
     ];
   }
 
-  const keys: CameraKey[] = [
-    { at: 0, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 },
-  ];
+  const keys: CameraKey[] = [];
 
-  let currentFrame = 0;
+  // 初始镜头: 开篇微远景
+  keys.push({ at: 0, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 });
 
-  events.forEach((ev, i) => {
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    const prevEv = events[i - 1];
     const scale = 1920 / imgW;
-    // 聚焦(Focus)时大幅推近(1.8~2.2x), 普通批注克制推近(1.35~1.7x)
+
     const idealZoom = ev.isFocus
       ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, ev.targetW * scale)))
       : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, ev.targetW * scale)));
 
-    const prevX = keys[keys.length - 1]?.x ?? (imgW / 2);
-    const prevY = keys[keys.length - 1]?.y ?? (imgH * 0.35);
-    const dist = Math.hypot(ev.cx - prevX, ev.cy - prevY);
+    // 1. 镜头必须在手绘笔迹生长前 6 帧稳稳到达并停住！
+    const targetArrive = Math.max(1, ev.at - 6);
 
-    // 自适应黄金比例运镜:
-    // 计算当前事件与前一机位之间的时间间隙 (deltaFrames)
-    const deltaFrames = Math.max(25, ev.at - currentFrame);
-    
-    // 镜头滑行耗时 (travelFrames): 占用前置间隙的 38%~44%，并在 20 ~ 55 帧之间弹性分配
-    // 对于 90 帧慢速口播，镜头会用约 38 帧 (~1.3s) 极其悠柔慢摇过去；对于 45 帧原版，用约 20 帧 (~0.7s)
-    const distFactor = Math.min(18, Math.round(dist / 40));
-    const travelFrames = Math.max(20, Math.min(55, Math.round(deltaFrames * 0.40) + distFactor));
+    // 2. 计算从上一个机位起步的时间点
+    if (!prevEv) {
+      // 第一个标注: 从开篇 0 帧平滑滑行到 targetArrive
+      const travelFromStart = Math.min(targetArrive, 24);
+      const departStart = Math.max(0, targetArrive - travelFromStart);
+      if (departStart > 0) {
+        keys.push({ at: departStart, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 });
+      }
+    } else {
+      // 上一个标注机位: 停留充分展示后，以黄金比例平滑滑向下一个目标
+      const gap = ev.at - prevEv.at;
+      const travelFrames = Math.max(16, Math.min(32, Math.round(gap * 0.36)));
+      const departAt = Math.max(prevEv.at + 12, targetArrive - travelFrames);
 
-    // 镜头就位时间 (镜头略微先行 5 帧到达)
-    const targetArrive = Math.max(currentFrame + travelFrames, ev.at - 5);
+      const prevIdealZoom = prevEv.isFocus
+        ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, prevEv.targetW * scale)))
+        : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, prevEv.targetW * scale)));
+
+      keys.push({
+        at: departAt,
+        x: prevEv.cx,
+        y: prevEv.cy + (prevEv.isFocus ? 5 : 3),
+        zoom: prevIdealZoom * (prevEv.isFocus ? 1.03 : 1.02),
+      });
+    }
+
+    // 3. 当前机位就位点 (提前 6 帧绝对稳固就绪)
     keys.push({
-      at: Math.max(1, targetArrive),
+      at: targetArrive,
       x: ev.cx,
       y: ev.cy,
       zoom: idealZoom,
     });
-
-    // 停留与持续有机微推 (Ken Burns 极慢呼吸微漂移)
-    const nextEv = events[i + 1];
-    const nextStart = nextEv ? nextEv.at : totalFrames - 24;
-    const nextGap = Math.max(25, nextStart - targetArrive);
-    
-    // 保持时间: 留出后置位移时间
-    const nextTravelEst = Math.max(18, Math.min(45, Math.round(nextGap * 0.38)));
-    const holdDuration = Math.max(16, nextStart - targetArrive - nextTravelEst);
-    const holdEnd = targetArrive + holdDuration;
-    const driftScale = ev.isFocus ? 1.045 : 1.025;
-
-    keys.push({
-      at: holdEnd,
-      x: ev.cx,
-      y: ev.cy + (ev.isFocus ? 10 : 6),
-      zoom: idealZoom * driftScale,
-    });
-
-    currentFrame = holdEnd;
-  });
-
-  // 片尾紧凑平滑拉回全景收尾 (用 24 帧干净利落回弹)
-  const endPullStart = Math.max(currentFrame + 4, totalFrames - 26);
-  if (endPullStart > currentFrame) {
-    keys.push({
-      at: endPullStart,
-      x: keys[keys.length - 1].x,
-      y: keys[keys.length - 1].y,
-      zoom: keys[keys.length - 1].zoom,
-    });
   }
 
+  // 最后一个标注结束后的收尾
+  const lastEv = events[events.length - 1];
+  if (lastEv) {
+    const scale = 1920 / imgW;
+    const lastIdealZoom = lastEv.isFocus
+      ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, lastEv.targetW * scale)))
+      : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, lastEv.targetW * scale)));
+    
+    // 最后一个标注画完后，在特写处停留约 16 帧供观众清晰阅读
+    const endHold = Math.min(totalFrames - 22, lastEv.at + 24);
+    if (endHold > lastEv.at) {
+      keys.push({
+        at: endHold,
+        x: lastEv.cx,
+        y: lastEv.cy + 4,
+        zoom: lastIdealZoom * 1.02,
+      });
+    }
+  }
+
+  // 片尾拉回全景
   keys.push({
     at: totalFrames,
     x: imgW / 2,
@@ -260,13 +266,13 @@ const autoCameraKeys = (
     zoom: 0.85,
   });
 
-  // 去重并按帧单调递增过滤
+  // 去重并严格按帧单调递增
   const cleanKeys: CameraKey[] = [];
   keys.sort((a, b) => a.at - b.at).forEach((k) => {
     const last = cleanKeys[cleanKeys.length - 1];
     if (!last) {
       cleanKeys.push(k);
-    } else if (k.at > last.at + 3) {
+    } else if (k.at > last.at + 2) {
       cleanKeys.push(k);
     } else {
       cleanKeys[cleanKeys.length - 1] = k;
