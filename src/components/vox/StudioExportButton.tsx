@@ -269,59 +269,62 @@ export const StudioExportButton: React.FC<Props> = ({ props, durationInFrames })
 
   return (
     <>
-      {/* 悬浮在 Studio 画面右上角的极简高级下载按钮 */}
+      {/* 悬浮在 Studio 画面右上角的高清大尺寸按钮 */}
       <div
         style={{
           position: "fixed",
-          top: 18,
-          right: 18,
+          top: 36,
+          right: 36,
           zIndex: 999999,
           pointerEvents: "auto",
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          gap: 16,
         }}
       >
         <button
           onClick={startExport}
           disabled={exporting}
           style={{
-            background: "rgba(24, 24, 27, 0.88)",
-            color: "#f4f4f5",
-            border: "1px solid rgba(255, 255, 255, 0.16)",
-            padding: "7px 14px",
-            borderRadius: "7px",
-            fontSize: "12px",
-            fontWeight: 550,
+            background: "rgba(18, 18, 22, 0.94)",
+            color: "#ffffff",
+            border: "2px solid rgba(255, 255, 255, 0.22)",
+            padding: "16px 36px",
+            borderRadius: "14px",
+            fontSize: "26px",
+            fontWeight: 650,
             cursor: exporting ? "not-allowed" : "pointer",
-            boxShadow: "0 4px 16px rgba(0, 0, 0, 0.45)",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.75)",
             display: "flex",
             alignItems: "center",
-            gap: "7px",
+            gap: "14px",
             transition: "all 0.18s ease",
-            backdropFilter: "blur(12px)",
-            letterSpacing: "0.2px",
+            backdropFilter: "blur(16px)",
+            letterSpacing: "0.5px",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif",
           }}
           onMouseEnter={(e) => {
             if (!exporting) {
-              e.currentTarget.style.background = "rgba(39, 39, 42, 0.95)";
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.32)";
+              e.currentTarget.style.background = "rgba(36, 36, 42, 0.98)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.45)";
+              e.currentTarget.style.transform = "translateY(-2px)";
             }
           }}
           onMouseLeave={(e) => {
             if (!exporting) {
-              e.currentTarget.style.background = "rgba(24, 24, 27, 0.88)";
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.16)";
+              e.currentTarget.style.background = "rgba(18, 18, 22, 0.94)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.22)";
+              e.currentTarget.style.transform = "translateY(0)";
             }
           }}
         >
           <svg
-            width="14"
-            height="14"
+            width="28"
+            height="28"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -333,14 +336,14 @@ export const StudioExportButton: React.FC<Props> = ({ props, durationInFrames })
         </button>
       </div>
 
-      {/* 导出进度遮罩与高级模态框 */}
+      {/* 导出进度遮罩与高清大号模态框 */}
       {exporting && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(12, 12, 14, 0.78)",
-            backdropFilter: "blur(12px)",
+            background: "rgba(8, 8, 12, 0.85)",
+            backdropFilter: "blur(20px)",
             zIndex: 9999999,
             display: "flex",
             alignItems: "center",
@@ -350,46 +353,46 @@ export const StudioExportButton: React.FC<Props> = ({ props, durationInFrames })
         >
           <div
             style={{
-              width: 400,
-              background: "#18181b",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
-              borderRadius: 12,
-              padding: "22px 24px",
-              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.8)",
+              width: 720,
+              background: "#18181c",
+              border: "2px solid rgba(255, 255, 255, 0.18)",
+              borderRadius: 24,
+              padding: "44px 52px",
+              boxShadow: "0 36px 90px rgba(0, 0, 0, 0.9)",
               textAlign: "center",
               color: "#fafafa",
-              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif",
             }}
           >
-            <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 10, letterSpacing: "0.2px" }}>
-              视频导出
+            <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 18, letterSpacing: "0.5px" }}>
+              视频合成导出
             </div>
-            <div style={{ fontSize: 12.5, color: "#a1a1aa", marginBottom: 18 }}>
+            <div style={{ fontSize: 22, color: "#a1a1aa", marginBottom: 32 }}>
               {statusMsg}
             </div>
 
-            {/* 极简进度条 */}
+            {/* 高清大号进度条 */}
             <div
               style={{
                 width: "100%",
-                height: 6,
-                background: "rgba(255, 255, 255, 0.08)",
+                height: 14,
+                background: "rgba(255, 255, 255, 0.1)",
                 borderRadius: 99,
                 overflow: "hidden",
-                marginBottom: 14,
+                marginBottom: 24,
               }}
             >
               <div
                 style={{
                   width: `${progress}%`,
                   height: "100%",
-                  background: "linear-gradient(90deg, #a1a1aa, #fafafa)",
+                  background: "linear-gradient(90deg, #a1a1aa, #ffffff)",
                   transition: "width 0.12s linear",
                 }}
               />
             </div>
 
-            <div style={{ fontSize: 11, color: "#71717a" }}>
+            <div style={{ fontSize: 16, color: "#71717a" }}>
               正在合成 60FPS 逐帧视频，完成后将自动触发浏览器下载
             </div>
           </div>
