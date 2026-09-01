@@ -88,6 +88,10 @@ export const voxAnnotateSchema = z.object({
   cameraMode: z.enum(["keys", "auto"]).default("keys"),
   /** 明暗主题模式: light(白底纸张/报纸), dark(黑底暗黑推特/代码), auto */
   theme: z.enum(["light", "dark", "auto"]).optional(),
+  /** 背景质感: grid(科技网格), noise(胶片杂色), paper(复古纸张), blueprint(工程蓝图), vignette(暗角微光), pure(纯黑), custom */
+  bgType: z.enum(["grid", "noise", "paper", "blueprint", "vignette", "pure", "custom"]).optional(),
+  /** 自定义背景图/视频 URL */
+  bgCustomUrl: z.string().optional(),
 });
 
 export type VoxAnnotateProps = z.infer<typeof voxAnnotateSchema>;
