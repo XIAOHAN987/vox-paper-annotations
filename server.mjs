@@ -40,27 +40,40 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 保存 JSON API
+  // 保存 JSON API (严格安全限制: 仅允许写入 public/scripts/*.json，杜绝目录穿越)
   if (req.method === "POST" && req.url.startsWith("/api/save")) {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       try {
         const data = JSON.parse(body);
-        let filePath = data.path || "scripts/vox-script.json";
-        filePath = filePath.replace(/^\/+/, "");
-        if (filePath.startsWith("public/")) {
-          filePath = filePath.replace(/^public\//, "");
+        let rawPath = String(data.path || "scripts/vox-script.json").trim();
+        // 过滤任何 ../ 与非法字符
+        const safeBaseName = path.basename(rawPath);
+        if (!safeBaseName.endsWith(".json")) {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: false, error: "Only .json files are permitted" }));
+          return;
         }
-        const fullPath = path.join(PUBLIC_DIR, filePath);
-        fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+        
+        const scriptsDir = path.join(PUBLIC_DIR, "scripts");
+        fs.mkdirSync(scriptsDir, { recursive: true });
+        const fullPath = path.join(scriptsDir, safeBaseName);
+
+        // 二次边界断言：确保文件绝对不会溢出 scripts 目录
+        if (!fullPath.startsWith(scriptsDir)) {
+          res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ success: false, error: "Forbidden directory access" }));
+          return;
+        }
+
         const content =
           typeof data.content === "string"
             ? data.content
             : JSON.stringify(data.content, null, 2);
         fs.writeFileSync(fullPath, content, "utf-8");
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ success: true, path: filePath }));
+        res.end(JSON.stringify({ success: true, path: `scripts/${safeBaseName}` }));
       } catch (err) {
         res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ success: false, error: err.message }));
@@ -185,3 +198,22 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`VOX Marker Server running on http://localhost:${PORT}`);
 });
+
+// 自动安全清理：每 30 分钟扫描并销毁超过 1 小时的临时渲染视频
+function cleanOldRenders() {
+  try {
+    if (!fs.existsSync(RENDERS_DIR)) return;
+    const now = Date.now();
+    const files = fs.readdirSync(RENDERS_DIR);
+    for (const f of files) {
+      if (!f.startsWith("vox-render-") && !f.startsWith("vox-video-")) continue;
+      const full = path.join(RENDERS_DIR, f);
+      const stat = fs.statSync(full);
+      if (now - stat.mtimeMs > 60 * 60 * 1000) { // 超过 1 小时自动删除
+        fs.unlinkSync(full);
+      }
+    }
+  } catch (_) {}
+}
+setInterval(cleanOldRenders, 30 * 60 * 1000);
+cleanOldRenders();
