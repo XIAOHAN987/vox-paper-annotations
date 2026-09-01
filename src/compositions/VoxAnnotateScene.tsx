@@ -108,7 +108,10 @@ export const calculateVoxMetadata: CalculateMetadataFunction<VoxAnnotateProps> =
 
   if (currentProps.scriptFile) {
     try {
-      const res = await fetch(staticFile(currentProps.scriptFile));
+      const res = await fetch(
+        staticFile(currentProps.scriptFile) + "?t=" + Date.now(),
+        { cache: "no-store" }
+      );
       if (res.ok) {
         scriptData = await res.json();
       }
@@ -299,7 +302,7 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
   useEffect(() => {
     if (!scriptFile) return;
     let cancelled = false;
-    fetch(staticFile(scriptFile))
+    fetch(staticFile(scriptFile) + "?t=" + Date.now(), { cache: "no-store" })
       .then((r) => r.json())
       .then((j) => {
         if (!cancelled) setScript(j);

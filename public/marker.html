@@ -176,10 +176,7 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;">
-      <a id="btn-top-studio" href="/studio/" target="_blank" style="background:#7c3aed;color:#fff;text-decoration:none;padding:5px 12px;border-radius:4px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;transition:background .15s;">
-        <span>▶ 打开 Remotion 电影级播放器 (全功能)</span>
-      </a>
-      <span style="font-size:11px;color:#64748b;">Remotion 60FPS 内核</span>
+      <span style="font-size:11px;color:#38bdf8;background:#0c4a6e;padding:3px 8px;border-radius:4px;font-weight:600;">Remotion 60FPS 内核</span>
     </div>
   </div>
 
@@ -266,8 +263,8 @@
 
       <div id="actions">
         <div class="row">
-          <button id="btn-save-project">保存到项目 (直接生效)</button>
-          <button id="btn-preview">▶ 实时预览 (60fps)</button>
+          <button id="btn-save-project" class="btn-primary" style="background:#16a34a;color:#fff;font-weight:700;">保存到项目 (直接生效)</button>
+          <button id="btn-open-studio" class="btn-primary" style="background:#7c3aed;color:#fff;font-weight:700;">▶ 打开 Remotion 播放器</button>
         </div>
         <div class="row">
           <button id="btn-copy">复制 JSON 数据</button>
@@ -275,7 +272,7 @@
         </div>
       </div>
 
-      <div id="hint">在图上拖框即标注 · 点击「实时预览」可在网页模拟相机运镜与手绘生长</div>
+      <div id="hint">在图上拖框即标注 · 点击「打开 Remotion 播放器」可在全功能 Studio 中播放与导出</div>
     </div>
   </div>
 
@@ -601,6 +598,18 @@ if (paceSelect) {
   };
 }
 
+const ACTION_NAMES = {
+  circle: '圆圈',
+  highlight: '高亮',
+  underline: '下划线',
+  wavy: '波浪线',
+  arrow: '箭头',
+  cross: '打叉',
+  box: '方框',
+  'box-tool': '方框',
+  focus: '聚焦'
+};
+
 function renderBoxes() {
   wrap.querySelectorAll('.box, .badge, .tech-pin, .tech-card-marker').forEach(el => el.remove());
   anns.forEach((a, i) => {
@@ -612,9 +621,10 @@ function renderBoxes() {
     el.style.width = (a.target.width * viewScale) + 'px';
     el.style.height = (a.target.height * viewScale) + 'px';
 
+    const actionLabel = ACTION_NAMES[a.action] || a.action;
     const b = document.createElement('div');
     b.className = 'badge';
-    b.textContent = `#${i + 1} ${a.action} @${(a.at/30).toFixed(1)}s (${a.at}f)`;
+    b.textContent = `#${i + 1} ${actionLabel} @${(a.at/30).toFixed(1)}s (${a.at}f)`;
     el.appendChild(b);
     wrap.appendChild(el);
   });
@@ -646,11 +656,12 @@ function renderList() {
   const list = document.getElementById('list');
   list.innerHTML = '';
   anns.sort((a, b) => a.at - b.at).forEach((a, i) => {
+    const actionLabel = ACTION_NAMES[a.action] || a.action;
     const it = document.createElement('div');
     it.className = 'ann-item';
     it.innerHTML = `
       <div class="ann-item-head">
-        <span class="ann-type">#${i + 1} [${a.action}]</span>
+        <span class="ann-type">#${i + 1} [${actionLabel}]</span>
         <button class="ann-del" onclick="delAnn(${a.id})">✕ 删除</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -757,7 +768,7 @@ document.getElementById('btn-save-project').onclick = async () => {
   const targetScript = currentTab === 'tech' ? 'scripts/tech-chip.json' : 'scripts/vox-script.json';
   try {
     await saveToProject(targetScript, jsonStr);
-    toast(`✔ 已同步到项目！点击右上角【Remotion 播放器】即刻查看大片`);
+    toast(`已保存并同步到项目！`);
   } catch (_) {
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const a = document.createElement('a');
@@ -766,6 +777,19 @@ document.getElementById('btn-save-project').onclick = async () => {
     a.click();
     toast(`已下载 ${targetScript.split('/')[1]} 文件`);
   }
+};
+
+document.getElementById('btn-open-studio').onclick = async () => {
+  const jsonStr = JSON.stringify(buildJSON(), null, 2);
+  const targetScript = currentTab === 'tech' ? 'scripts/tech-chip.json' : 'scripts/vox-script.json';
+  try {
+    await saveToProject(targetScript, jsonStr);
+    toast('已同步最新数据，正在打开播放器...');
+  } catch (_) {}
+  const studioUrl = window.location.port === '3008'
+    ? 'http://localhost:3000'
+    : (window.location.hostname === '43.128.118.251' ? 'http://43.128.118.251:3000' : '/studio/');
+  window.open(studioUrl, '_blank');
 };
 
 document.getElementById('btn-copy').onclick = async () => {
@@ -1076,18 +1100,56 @@ function renderCanvasFrame(frame) {
   ctx.restore();
 }
 
-// 动态适配 Remotion Studio 跳转地址
-const studioBtn = document.getElementById('btn-top-studio');
-if (window.location.port === '3008') {
-  studioBtn.href = 'http://localhost:3000';
-} else if (window.location.hostname === '43.128.118.251') {
-  studioBtn.href = 'http://43.128.118.251:3000';
-} else {
-  studioBtn.href = '/studio/';
+// 启动时自动恢复上次保存的标注数据与素材
+async function autoLoadSavedData() {
+  try {
+    const prefix = window.location.pathname.startsWith('/vox') ? '/vox' : '';
+    const res = await fetch(`${prefix}/scripts/vox-script.json?t=` + Date.now(), { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.annotations && data.annotations.length > 0) {
+        anns = data.annotations.map(a => ({
+          id: idSeq++,
+          action: a.action,
+          at: a.at,
+          target: a.target
+        }));
+        if (data.focus) {
+          anns.push({
+            id: idSeq++,
+            action: 'focus',
+            at: data.focus.at,
+            target: data.focus.target
+          });
+        }
+        if (data.theme) {
+          curTheme = data.theme;
+          document.getElementById('theme-select').value = curTheme;
+          COLORS = curTheme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
+        }
+        if (data.bgType) {
+          curBgType = data.bgType;
+          document.getElementById('bg-select').value = curBgType;
+          updateStageBackground();
+        }
+        if (data.image) {
+          loadImgFromSrc(data.image);
+        } else {
+          loadImgFromSrc('screenshots/hockey-page.png');
+        }
+        renderBoxes();
+        renderList();
+        toast('已自动加载最新标注项目');
+        return;
+      }
+    }
+  } catch (e) {
+    console.log('No saved data to load:', e);
+  }
+  loadImgFromSrc('screenshots/hockey-page.png');
 }
 
-// 默认加载 VOX Demo
-loadImgFromSrc('screenshots/hockey-page.png');
+autoLoadSavedData();
 </script>
 </body>
 </html>

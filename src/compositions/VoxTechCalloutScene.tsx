@@ -52,7 +52,10 @@ export const calculateTechMetadata: CalculateMetadataFunction<VoxTechSceneProps>
 
   if (current.scriptFile) {
     try {
-      const res = await fetch(staticFile(current.scriptFile));
+      const res = await fetch(
+        staticFile(current.scriptFile) + "?t=" + Date.now(),
+        { cache: "no-store" }
+      );
       if (res.ok) scriptData = await res.json();
     } catch {
       // 忽略无法拉取的情况
@@ -74,7 +77,7 @@ export const VoxTechCalloutScene: React.FC<VoxTechSceneProps> = (props) => {
 
   React.useEffect(() => {
     if (!props.scriptFile) return;
-    fetch(staticFile(props.scriptFile))
+    fetch(staticFile(props.scriptFile) + "?t=" + Date.now(), { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setScript(data))
       .catch(() => {});
