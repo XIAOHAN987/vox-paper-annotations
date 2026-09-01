@@ -441,6 +441,20 @@
           </select>
         </div>
 
+        <div class="control-group">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span class="field-label" style="margin-bottom:0;">纸张胶片噪点</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:var(--text-2);">
+              <input type="checkbox" id="grain-toggle" checked style="cursor:pointer;accent-color:#e4e4e7;">
+              <span id="grain-toggle-label">开启</span>
+            </label>
+          </div>
+          <div id="grain-slider-wrap" style="display:flex;align-items:center;gap:8px;">
+            <input type="range" id="grain-slider" min="0" max="100" value="35" step="5" style="flex:1;accent-color:#e4e4e7;cursor:pointer;">
+            <span id="grain-val" style="font-size:11px;color:var(--text-1);font-weight:600;min-width:32px;text-align:right;">35%</span>
+          </div>
+        </div>
+
         <div class="control-group" style="margin-bottom:2px;">
           <span class="field-label">节奏预设</span>
           <select id="pace-select" class="input-select" style="color:var(--accent-hover);font-weight:600;">
@@ -612,6 +626,31 @@ function updateStageBackground() {
   }
 }
 updateStageBackground();
+
+let enableGrain = true, grainOpacity = 0.35;
+
+const grainToggle = document.getElementById('grain-toggle');
+const grainToggleLabel = document.getElementById('grain-toggle-label');
+const grainSlider = document.getElementById('grain-slider');
+const grainSliderWrap = document.getElementById('grain-slider-wrap');
+const grainVal = document.getElementById('grain-val');
+
+if (grainToggle) {
+  grainToggle.onchange = (e) => {
+    enableGrain = e.target.checked;
+    grainToggleLabel.textContent = enableGrain ? '开启' : '关闭';
+    grainSliderWrap.style.opacity = enableGrain ? '1' : '0.4';
+    grainSlider.disabled = !enableGrain;
+    toast(`纸张胶片噪点: ${enableGrain ? '已开启' : '已关闭'}`);
+  };
+}
+
+if (grainSlider) {
+  grainSlider.oninput = (e) => {
+    grainOpacity = parseInt(e.target.value) / 100;
+    grainVal.textContent = `${e.target.value}%`;
+  };
+}
 
 const typeBtns = document.querySelectorAll('#type-row button');
 typeBtns.forEach(btn => {
@@ -959,7 +998,8 @@ function buildJSON() {
     image: uploadedDataUrl || (document.getElementById('img-path').value.trim() || 'screenshots/hockey-page.png'),
     imageWidth: imgW,
     imageHeight: imgH,
-    grainOpacity: 0.25,
+    enableGrain: enableGrain,
+    grainOpacity: grainOpacity,
     cameraMode: 'auto',
     theme: curTheme,
     bgType: curBgType,
@@ -1339,6 +1379,19 @@ async function autoLoadSavedData() {
           curBgType = data.bgType;
           document.getElementById('bg-select').value = curBgType;
           updateStageBackground();
+        }
+        if (data.enableGrain !== undefined) {
+          enableGrain = Boolean(data.enableGrain);
+          document.getElementById('grain-toggle').checked = enableGrain;
+          document.getElementById('grain-toggle-label').textContent = enableGrain ? '开启' : '关闭';
+          document.getElementById('grain-slider-wrap').style.opacity = enableGrain ? '1' : '0.4';
+          document.getElementById('grain-slider').disabled = !enableGrain;
+        }
+        if (data.grainOpacity !== undefined) {
+          grainOpacity = parseFloat(data.grainOpacity) || 0.35;
+          const pct = Math.round(grainOpacity * 100);
+          document.getElementById('grain-slider').value = pct;
+          document.getElementById('grain-val').textContent = `${pct}%`;
         }
         const imgToLoad = data.image || 'screenshots/hockey-page.png';
         document.getElementById('img-path').value = imgToLoad.startsWith('data:') ? '' : imgToLoad;

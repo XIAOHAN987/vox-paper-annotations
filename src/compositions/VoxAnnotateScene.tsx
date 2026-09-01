@@ -81,8 +81,10 @@ export const voxAnnotateSchema = z.object({
   annotations: z.array(annotationSchema),
   cameraKeys: z.array(cameraKeySchema),
   focus: focusSchema.optional(),
+  /** 是否开启纸张胶片噪点与微抖动 */
+  enableGrain: z.boolean().default(true),
   /** 噪点强度 0~1 */
-  grainOpacity: z.number().default(0.28),
+  grainOpacity: z.number().default(0.35),
   /** 标注 JSON 文件(public 路径, 如 scripts/hockey.json), 填了则覆盖上面所有数据字段 */
   scriptFile: z.string().optional(),
   /** 相机模式: keys=手动关键帧表; auto=跟随批注自动运镜(镜头先行) */
@@ -674,7 +676,8 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
         <VoxPaperOverlay
           texture="textures/grain.jpg"
           opacity={dGrain}
-          blendMode="overlay"
+          enabled={data.enableGrain !== false}
+          theme={data.theme}
           vignette
         />
 
