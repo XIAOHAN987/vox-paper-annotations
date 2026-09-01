@@ -196,6 +196,13 @@
     <div id="player-controls">
       <button id="btn-play-pause">暂停</button>
       <button id="btn-restart">重播</button>
+      <select id="speed-select" style="background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 8px;border-radius:4px;font-size:12px;outline:none;cursor:pointer;">
+        <option value="0.5">0.5x 极慢</option>
+        <option value="0.75">0.75x 慢速</option>
+        <option value="1.0" selected>1.0x 电影原速 (30fps)</option>
+        <option value="1.25">1.25x 快速</option>
+        <option value="1.5">1.5x 倍速</option>
+      </select>
       <input type="range" id="player-seek" min="0" max="300" value="0">
       <span id="player-time" style="font-size:12px;color:#94a3b8;font-family:monospace;">00:00 / 00:10</span>
       <button id="btn-close-modal" style="background:#dc2626;">关闭预览</button>
@@ -454,6 +461,7 @@ document.getElementById('btn-preview').onclick = () => {
   modal.style.display = 'flex';
   currentFrame = 0;
   isPlaying = true;
+  lastTime = performance.now();
   playLoop();
 };
 
@@ -466,14 +474,23 @@ document.getElementById('btn-close-modal').onclick = () => {
 document.getElementById('btn-play-pause').onclick = (e) => {
   isPlaying = !isPlaying;
   e.target.textContent = isPlaying ? '暂停' : '播放';
-  if (isPlaying) playLoop();
+  if (isPlaying) {
+    lastTime = performance.now();
+    playLoop();
+  }
 };
 
 document.getElementById('btn-restart').onclick = () => {
   currentFrame = 0;
   isPlaying = true;
+  lastTime = performance.now();
   document.getElementById('btn-play-pause').textContent = '暂停';
   playLoop();
+};
+
+document.getElementById('speed-select').onchange = (e) => {
+  playbackSpeed = parseFloat(e.target.value) || 1.0;
+  lastTime = performance.now();
 };
 
 seek.oninput = (e) => {
@@ -481,13 +498,26 @@ seek.oninput = (e) => {
   renderFrame(currentFrame);
 };
 
-function playLoop() {
+let playbackSpeed = 1.0;
+let lastTime = 0;
+
+function playLoop(currentTime) {
   if (!isPlaying) return;
-  const totalFrames = parseInt(seek.max);
-  currentFrame++;
-  if (currentFrame > totalFrames) currentFrame = 0;
-  seek.value = currentFrame;
-  renderFrame(currentFrame);
+  if (!currentTime) currentTime = performance.now();
+  if (!lastTime) lastTime = currentTime;
+
+  const delta = currentTime - lastTime;
+  const targetInterval = (1000 / 30) / playbackSpeed;
+
+  if (delta >= targetInterval) {
+    const framesToAdvance = Math.floor(delta / targetInterval);
+    lastTime = currentTime - (delta % targetInterval);
+    const totalFrames = parseInt(seek.max);
+    currentFrame += framesToAdvance;
+    if (currentFrame > totalFrames) currentFrame = 0;
+    seek.value = currentFrame;
+    renderFrame(currentFrame);
+  }
   animFrameId = requestAnimationFrame(playLoop);
 }
 
