@@ -17,7 +17,7 @@ export const RemotionRoot: React.FC = () => {
     <>
       {/* 1. VOX 纸张手绘标注大片: 由工作台直接驱动，自动运镜与动态时长 */}
       <Composition
-        id="VOX_纸张手绘标注"
+        id="VOX-纸张手绘标注"
         component={VoxAnnotateScene}
         calculateMetadata={calculateVoxMetadata}
         durationInFrames={300}
@@ -39,7 +39,7 @@ export const RemotionRoot: React.FC = () => {
 
       {/* 2. CAD 暗调科技引线拆解大片: 由工作台直接驱动，自动对焦与发光折线参数卡片 */}
       <Composition
-        id="CAD_科技引线拆解"
+        id="CAD-科技引线拆解"
         component={VoxTechCalloutScene}
         calculateMetadata={calculateTechMetadata}
         durationInFrames={300}
@@ -60,7 +60,7 @@ export const RemotionRoot: React.FC = () => {
 
       {/* 3. 官方全动效演示分镜 (Showcase) */}
       <Composition
-        id="VOX_全动效展示Demo"
+        id="VOX-全动效展示Demo"
         component={VoxAnnotateScene}
         durationInFrames={420}
         fps={30}
