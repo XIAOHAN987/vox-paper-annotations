@@ -183,43 +183,59 @@ const autoCameraKeys = (
     { at: 0, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 },
   ];
 
-  for (let i = 0; i < events.length; i++) {
-    const ev = events[i];
-    const nextEv = events[i + 1];
-    const scale = 1920 / imgW;
+  let currentFrame = 0;
 
+  events.forEach((ev, i) => {
+    const scale = 1920 / imgW;
+    // 聚焦(Focus)时大幅推近(1.8~2.2x), 普通批注克制推近(1.35~1.7x)
     const idealZoom = ev.isFocus
       ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, ev.targetW * scale)))
       : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, ev.targetW * scale)));
 
-    // 1. 镜头提前 6 帧稳稳到达并停住
-    const arriveAt = Math.max(1, ev.at - 6);
+    const prevX = keys[keys.length - 1]?.x ?? (imgW / 2);
+    const prevY = keys[keys.length - 1]?.y ?? (imgH * 0.35);
+    const dist = Math.hypot(ev.cx - prevX, ev.cy - prevY);
+    
+    // 原版经典从容滑行时间: 24 ~ 36 帧 (约 0.8s ~ 1.2s)，绝不仓促飞过
+    const travelFrames = Math.max(24, Math.min(36, Math.round(dist / 22)));
+
+    // 镜头就位时间 (严格在手绘开始前 6 帧稳稳到达)
+    const targetArrive = Math.max(currentFrame + travelFrames, ev.at - 6);
     keys.push({
-      at: arriveAt,
+      at: Math.max(1, targetArrive),
       x: ev.cx,
       y: ev.cy,
       zoom: idealZoom,
     });
 
-    // 2. 原版核心精髓: 到位后稳固停顿 + 沉浸呼吸微推 (Rock-solid Settle & Hold)
-    const nextArrive = nextEv ? Math.max(1, nextEv.at - 6) : totalFrames - 24;
-    const gap = nextArrive - arriveAt;
-    const travelToNext = Math.max(16, Math.min(28, Math.round(gap * 0.35)));
+    // 停留与慢速微推(Ken Burns 漂移: 聚焦时推 5%, 普通推 3%)
+    const nextEv = events[i + 1];
+    const nextStart = nextEv ? nextEv.at : totalFrames - 30;
+    const holdDuration = Math.max(20, Math.min(60, nextStart - targetArrive - 24));
+    const holdEnd = targetArrive + holdDuration;
+    const driftScale = ev.isFocus ? 1.05 : 1.03;
 
-    // 停顿保持点: 留出后置位移时间，其余时间全部稳稳锁定在当前特写
-    const holdEnd = Math.min(nextArrive - travelToNext, Math.max(ev.at + 25, arriveAt + 18));
+    keys.push({
+      at: holdEnd,
+      x: ev.cx,
+      y: ev.cy + (ev.isFocus ? 12 : 8),
+      zoom: idealZoom * driftScale,
+    });
 
-    if (holdEnd > arriveAt + 2) {
-      keys.push({
-        at: holdEnd,
-        x: ev.cx,
-        y: ev.cy + (ev.isFocus ? 10 : 6),
-        zoom: idealZoom * (ev.isFocus ? 1.04 : 1.025),
-      });
-    }
-  }
+    currentFrame = holdEnd;
+  });
 
   // 片尾拉回全景
+  const endPullStart = Math.min(totalFrames - 24, Math.max(currentFrame + 6, totalFrames - 32));
+  if (endPullStart > currentFrame) {
+    keys.push({
+      at: endPullStart,
+      x: keys[keys.length - 1].x,
+      y: keys[keys.length - 1].y,
+      zoom: keys[keys.length - 1].zoom,
+    });
+  }
+
   keys.push({
     at: totalFrames,
     x: imgW / 2,
@@ -233,7 +249,7 @@ const autoCameraKeys = (
     const last = cleanKeys[cleanKeys.length - 1];
     if (!last) {
       cleanKeys.push(k);
-    } else if (k.at > last.at + 1) {
+    } else if (k.at > last.at + 2) {
       cleanKeys.push(k);
     } else {
       cleanKeys[cleanKeys.length - 1] = k;

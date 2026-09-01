@@ -577,7 +577,27 @@ const paceSelect = document.getElementById('pace-select');
 if (paceSelect) {
   paceSelect.onchange = (e) => {
     paceInterval = parseInt(e.target.value) || 45;
-    toast(`已切换节奏: 进场间隔 ${paceInterval} 帧 (${(paceInterval/30).toFixed(1)}s)`);
+    // 自动按新节奏重新等距排布已有标注
+    if (anns.length > 0) {
+      anns.sort((a, b) => a.at - b.at);
+      let cur = 20;
+      anns.forEach((a) => {
+        a.at = cur;
+        cur += paceInterval;
+      });
+      renderBoxes();
+      renderList();
+    }
+    if (techCallouts.length > 0) {
+      techCallouts.sort((a, b) => a.at - b.at);
+      let cur = 25;
+      techCallouts.forEach((c) => {
+        c.at = cur;
+        cur += paceInterval;
+      });
+      renderTechCallouts();
+    }
+    toast(`已切换节奏并重新排布标注时间 (间隔 ${paceInterval} 帧 / ${(paceInterval/30).toFixed(1)}s)`);
   };
 }
 
