@@ -111,7 +111,8 @@ export const VoxTechCalloutScene: React.FC<VoxTechSceneProps> = (props) => {
       const pxX = doc.px(midX);
       const pxY = doc.py(midY);
 
-      const p = Math.min(1, Math.max(0, (frame - (curActive.at - 20)) / 22));
+      const travelFrames = Math.max(22, Math.min(45, Math.round(curActive.at * 0.36)));
+      const p = Math.min(1, Math.max(0, (frame - (curActive.at - travelFrames)) / travelFrames));
       const smoothP = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 
       targetX = (doc.w / 2) * (1 - smoothP) + pxX * smoothP;

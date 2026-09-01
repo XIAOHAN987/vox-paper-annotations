@@ -202,10 +202,17 @@ const autoCameraKeys = (
     const prevX = keys[keys.length - 1]?.x ?? (imgW / 2);
     const prevY = keys[keys.length - 1]?.y ?? (imgH * 0.35);
     const dist = Math.hypot(ev.cx - prevX, ev.cy - prevY);
-    // 根据空间位移距离自适应分配 18~28 帧滑行时间
-    const travelFrames = Math.max(18, Math.min(28, Math.round(dist / 28)));
 
-    // 镜头就位时间
+    // 自适应黄金比例运镜:
+    // 计算当前事件与前一机位之间的时间间隙 (deltaFrames)
+    const deltaFrames = Math.max(25, ev.at - currentFrame);
+    
+    // 镜头滑行耗时 (travelFrames): 占用前置间隙的 38%~44%，并在 20 ~ 55 帧之间弹性分配
+    // 对于 90 帧慢速口播，镜头会用约 38 帧 (~1.3s) 极其悠柔慢摇过去；对于 45 帧原版，用约 20 帧 (~0.7s)
+    const distFactor = Math.min(18, Math.round(dist / 40));
+    const travelFrames = Math.max(20, Math.min(55, Math.round(deltaFrames * 0.40) + distFactor));
+
+    // 镜头就位时间 (镜头略微先行 5 帧到达)
     const targetArrive = Math.max(currentFrame + travelFrames, ev.at - 5);
     keys.push({
       at: Math.max(1, targetArrive),
@@ -214,25 +221,29 @@ const autoCameraKeys = (
       zoom: idealZoom,
     });
 
-    // 停留与慢速微推(Ken Burns 漂移: 聚焦时推 5%, 普通推 3%)
+    // 停留与持续有机微推 (Ken Burns 极慢呼吸微漂移)
     const nextEv = events[i + 1];
     const nextStart = nextEv ? nextEv.at : totalFrames - 24;
-    const holdDuration = Math.max(16, Math.min(45, nextStart - targetArrive - 18));
+    const nextGap = Math.max(25, nextStart - targetArrive);
+    
+    // 保持时间: 留出后置位移时间
+    const nextTravelEst = Math.max(18, Math.min(45, Math.round(nextGap * 0.38)));
+    const holdDuration = Math.max(16, nextStart - targetArrive - nextTravelEst);
     const holdEnd = targetArrive + holdDuration;
-    const driftScale = ev.isFocus ? 1.05 : 1.03;
+    const driftScale = ev.isFocus ? 1.045 : 1.025;
 
     keys.push({
       at: holdEnd,
       x: ev.cx,
-      y: ev.cy + (ev.isFocus ? 12 : 8),
+      y: ev.cy + (ev.isFocus ? 10 : 6),
       zoom: idealZoom * driftScale,
     });
 
     currentFrame = holdEnd;
   });
 
-  // 片尾紧凑平滑拉回全景收尾 (用 22 帧干净利落回弹)
-  const endPullStart = Math.max(currentFrame + 4, totalFrames - 24);
+  // 片尾紧凑平滑拉回全景收尾 (用 24 帧干净利落回弹)
+  const endPullStart = Math.max(currentFrame + 4, totalFrames - 26);
   if (endPullStart > currentFrame) {
     keys.push({
       at: endPullStart,
@@ -348,7 +359,8 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
 
   const cam = useMemo(() => {
     const frames = keys.map((k) => k.at);
-    const easing = Easing.inOut(Easing.cubic);
+    // 电影级极柔缓动曲线 (近似重型机械臂平滑启停物理)
+    const easing = Easing.bezier(0.25, 0.1, 0.25, 1.0);
     const fx = interpolate(frame, frames, keys.map((k) => k.x), {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
