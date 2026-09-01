@@ -1,59 +1,51 @@
 {
-  "image": "screenshots/google.jpg",
-  "imageWidth": 1833,
-  "imageHeight": 2048,
-  "grainOpacity": 0.12,
-  "theme": "dark",
+  "image": "screenshots/hockey-page.png",
+  "imageWidth": 1652,
+  "imageHeight": 1671,
+  "durationInFrames": 300,
+  "grainOpacity": 0.25,
+  "theme": "light",
+  "bgType": "noise",
   "cameraMode": "auto",
   "annotations": [
     {
       "action": "circle",
       "at": 30,
       "target": {
-        "x": 105,
-        "y": 79,
-        "width": 1190,
-        "height": 244
+        "x": 685,
+        "y": 83,
+        "width": 797,
+        "height": 88
       }
     },
     {
       "action": "highlight",
       "at": 90,
       "target": {
-        "x": 764,
-        "y": 646,
-        "width": 405,
-        "height": 35
+        "x": 689,
+        "y": 528,
+        "width": 852,
+        "height": 89
       }
     },
     {
-      "action": "highlight",
+      "action": "arrow",
       "at": 150,
       "target": {
-        "x": 235,
-        "y": 1019,
-        "width": 212,
-        "height": 76
+        "x": 127,
+        "y": 93,
+        "width": 243,
+        "height": 153
       }
     },
     {
       "action": "highlight",
       "at": 210,
       "target": {
-        "x": 717,
-        "y": 1424,
-        "width": 704,
-        "height": 62
-      }
-    },
-    {
-      "action": "underline",
-      "at": 270,
-      "target": {
-        "x": 208,
-        "y": 1840,
-        "width": 1045,
-        "height": 64
+        "x": 70,
+        "y": 775,
+        "width": 595,
+        "height": 128
       }
     }
   ]
