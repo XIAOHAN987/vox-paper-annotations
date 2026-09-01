@@ -1,0 +1,58 @@
+{
+  "image": "screenshots/谷歌员工蹭热度.jpg",
+  "imageWidth": 1833,
+  "imageHeight": 2048,
+  "grainOpacity": 0.25,
+  "annotations": [
+    {
+      "action": "wavy",
+      "at": 30,
+      "target": {
+        "x": 219,
+        "y": 177,
+        "width": 987,
+        "height": 143
+      }
+    },
+    {
+      "action": "wavy",
+      "at": 90,
+      "target": {
+        "x": 587,
+        "y": 494,
+        "width": 1205,
+        "height": 204
+      }
+    },
+    {
+      "action": "wavy",
+      "at": 150,
+      "target": {
+        "x": 78,
+        "y": 890,
+        "width": 570,
+        "height": 204
+      }
+    },
+    {
+      "action": "wavy",
+      "at": 210,
+      "target": {
+        "x": 532,
+        "y": 1294,
+        "width": 1003,
+        "height": 202
+      }
+    },
+    {
+      "action": "wavy",
+      "at": 270,
+      "target": {
+        "x": 61,
+        "y": 1701,
+        "width": 1306,
+        "height": 220
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/marker", "destination": "/public/marker.html" },
+    { "source": "/marker.html", "destination": "/public/marker.html" }
+  ]
+}

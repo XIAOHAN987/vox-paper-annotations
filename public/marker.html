@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>VOX 标注工具</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif; background: #1a1a1a; color: #eee; display: flex; height: 100vh; overflow: hidden; }
+  #stage { flex: 1; overflow: auto; position: relative; background: #111; }
+  #canvas-wrap { position: relative; display: inline-block; cursor: crosshair; }
+  #canvas-wrap img { display: block; user-select: none; -webkit-user-drag: none; }
+  .box { position: absolute; border: 2px solid; pointer-events: none; }
+  .box.circle { border-color: #3b82f6; border-radius: 50%; }
+  .box.highlight { border-color: #eab308; background: rgba(253,224,71,.25); }
+  .box.underline { border-color: #ef4444; border-bottom-width: 5px; }
+  .box.wavy { border-color: #f43f5e; border-bottom-style: dotted; border-bottom-width: 4px; }
+  .box.arrow { border-color: #2563eb; border-style: dashed; }
+  .box.cross { border-color: #dc2626; }
+  .box.box { border-color: #0284c7; border-style: solid; }
+  .box.focus { border-color: #a855f7; border-style: dashed; }
+  .box .tag { position: absolute; top: -22px; left: 0; font-size: 11px; background: #000; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  #panel { width: 360px; background: #222; border-left: 1px solid #333; display: flex; flex-direction: column; }
+  #panel header { padding: 14px; border-bottom: 1px solid #333; }
+  #panel header h1 { font-size: 15px; margin-bottom: 8px; }
+  #img-row { display: flex; gap: 6px; }
+  #img-row input { flex: 1; background: #111; border: 1px solid #444; color: #eee; padding: 5px 8px; border-radius: 4px; font-size: 12px; }
+  #img-row button { background: #3b82f6; border: 0; color: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  #type-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 14px; border-bottom: 1px solid #333; }
+  #type-row button { padding: 7px 4px; border: 1px solid #444; background: #2a2a2a; color: #ccc; border-radius: 5px; cursor: pointer; font-size: 12px; text-align: center; }
+  #type-row button.active { border-color: currentColor; font-weight: 600; }
+  #type-row button[data-t="circle"] { color: #60a5fa; } #type-row button[data-t="circle"].active { background: #1e3a5f; }
+  #type-row button[data-t="highlight"] { color: #facc15; } #type-row button[data-t="highlight"].active { background: #4a3d0a; }
+  #type-row button[data-t="underline"] { color: #f87171; } #type-row button[data-t="underline"].active { background: #4a1515; }
+  #type-row button[data-t="wavy"] { color: #fb7185; } #type-row button[data-t="wavy"].active { background: #4c1d24; }
+  #type-row button[data-t="arrow"] { color: #93c5fd; } #type-row button[data-t="arrow"].active { background: #1e3a8a; }
+  #type-row button[data-t="cross"] { color: #fca5a5; } #type-row button[data-t="cross"].active { background: #7f1d1d; }
+  #type-row button[data-t="box"] { color: #38bdf8; } #type-row button[data-t="box"].active { background: #0c4a6e; }
+  #type-row button[data-t="focus"] { color: #c084fc; } #type-row button[data-t="focus"].active { background: #3b1f5e; }
+  #list { flex: 1; overflow: auto; padding: 8px 14px; }
+  .ann { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid #333; border-radius: 5px; margin-bottom: 6px; font-size: 12px; }
+  .ann .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .ann .info { flex: 1; line-height: 1.4; color: #bbb; }
+  .ann .info b { color: #eee; }
+  .ann input { width: 52px; background: #111; border: 1px solid #444; color: #eee; padding: 2px 5px; border-radius: 3px; font-size: 12px; }
+  .ann .del { background: none; border: 0; color: #888; cursor: pointer; font-size: 14px; }
+  .ann .del:hover { color: #f87171; }
+  #actions { padding: 12px 14px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px; }
+  #actions .row { display: flex; gap: 8px; }
+  #actions button { flex: 1; padding: 9px; border: 0; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  #btn-copy { background: #16a34a; color: #fff; }
+  #btn-download { background: #333; color: #eee; border: 1px solid #555 !important; }
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #16a34a; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #hint { padding: 8px 14px; font-size: 11px; color: #777; border-top: 1px solid #333; }
+</style>
+</head>
+<body>
+  <div id="stage"><div id="canvas-wrap"></div></div>
+  <div id="panel">
+    <header>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <h1 style="margin:0;">VOX 标注工具</h1>
+        <a href="/" style="font-size:12px;color:#38bdf8;text-decoration:none;border:1px solid #0284c7;padding:3px 8px;border-radius:4px;">播放器预览 &rarr;</a>
+      </div>
+      <div id="img-row">
+        <input id="img-path" list="known-images" placeholder="相对路径 如 screenshots/hockey-page.png">
+        <datalist id="known-images">
+          <option value="screenshots/hockey-page.png"></option>
+          <option value="textures/newspaper.jpg"></option>
+        </datalist>
+        <button id="btn-load">加载</button>
+      </div>
+      <div id="img-err" style="display:none;color:#f87171;font-size:12px;margin-top:6px;"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <span style="font-size:12px;color:#aaa;">底色模式:</span>
+        <select id="theme-select" style="flex:1;background:#222;color:#eee;border:1px solid #444;padding:4px 8px;border-radius:4px;font-size:12px;outline:none;">
+          <option value="light">浅色纸张 / 白底报纸 (Light)</option>
+          <option value="dark">暗黑模式 / 纯黑推特 (Dark)</option>
+        </select>
+      </div>
+    </header>
+    <div id="type-row">
+      <button data-t="circle" class="active">圆圈</button>
+      <button data-t="highlight">高亮</button>
+      <button data-t="underline">下划线</button>
+      <button data-t="wavy">波浪线</button>
+      <button data-t="arrow">箭头</button>
+      <button data-t="cross">打叉</button>
+      <button data-t="box">方框</button>
+      <button data-t="focus">聚焦</button>
+    </div>
+    <div id="list"></div>
+    <div id="actions">
+      <div class="row">
+        <button id="btn-save" style="background:#7c3aed;color:#fff;">保存到项目</button>
+      </div>
+      <div class="row">
+        <button id="btn-copy">复制 JSON</button>
+        <button id="btn-download">下载 .json</button>
+      </div>
+    </div>
+    <div id="hint">在图上拖框即标注 · at = 出现帧 · 导出后粘贴到 Composition 的 scriptFile 对应 JSON</div>
+  </div>
+  <div id="toast">已复制</div>
+<script>
+let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'light', anns = [], drawing = null, idSeq = 1;
+const wrap = document.getElementById('canvas-wrap');
+const LIGHT_COLORS = {
+  circle: '#3b82f6',
+  highlight: '#eab308',
+  underline: '#ef4444',
+  wavy: '#f43f5e',
+  arrow: '#2563eb',
+  cross: '#dc2626',
+  box: '#0284c7',
+  focus: '#a855f7'
+};
+const DARK_COLORS = {
+  circle: '#60a5fa',
+  highlight: '#fde047',
+  underline: '#f87171',
+  wavy: '#fb7185',
+  arrow: '#38bdf8',
+  cross: '#ef4444',
+  box: '#38bdf8',
+  focus: '#c084fc'
+};
+let COLORS = LIGHT_COLORS;
+
+document.getElementById('theme-select').onchange = (e) => {
+  curTheme = e.target.value;
+  COLORS = curTheme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
+  renderBoxes();
+  renderList();
+};
+
+const STATIC_BASE = (location.pathname.match(/^\/static-[^/]+/) || [''])[0];
+const assetUrl = (rel) => STATIC_BASE + '/' + rel.replace(/^\/+/, '');
+const saveToProject = async (rel, content) => {
+  try {
+    const res = await fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: rel, content: JSON.parse(content) }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (_) {}
+
+  if (STATIC_BASE) {
+    const res = await fetch(`${STATIC_BASE}/api/add-asset?filePath=${encodeURIComponent(rel)}`, {
+      method: 'POST', body: content,
+    });
+    const j = await res.json();
+    if (j.success) return j;
+  }
+
+  throw new Error('no-api');
+};
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = 1;
+  setTimeout(() => t.style.opacity = 0, 1500);
+}
+
+function normalizePath(raw) {
+  let p = raw.trim().replace(/^["']|["']$/g, '').replace(/\\/g, '/');
+  const m = p.match(/public\/(.+)$/i);
+  if (m) p = m[1];
+  p = p.replace(/^\/+/, '');
+  return p;
+}
+
+document.getElementById('btn-load').onclick = () => {
+  const p = normalizePath(document.getElementById('img-path').value);
+  const errEl = document.getElementById('img-err');
+  errEl.style.display = 'none';
+  if (!p) { errEl.textContent = '请输入图片路径'; errEl.style.display = 'block'; return; }
+  document.getElementById('img-path').value = p;
+  const img = new Image();
+  img.onload = () => {
+    imgW = img.naturalWidth; imgH = img.naturalHeight;
+    wrap.innerHTML = '';
+    wrap.appendChild(img);
+    const fit = () => {
+      viewScale = Math.min(1, (document.getElementById('stage').clientWidth - 40) / imgW);
+      img.style.width = imgW * viewScale + 'px';
+      renderBoxes();
+    };
+    fit();
+    window.onresize = fit;
+    anns = []; renderList();
+    toast(`已加载 ${imgW}×${imgH}`);
+  };
+  img.onerror = () => {
+    errEl.textContent = `加载失败: ${assetUrl(p)} — 确认文件在 public/ 目录下, 用相对路径(如 screenshots/xxx.png)`;
+    errEl.style.display = 'block';
+  };
+  img.src = assetUrl(p);
+};
+
+document.querySelectorAll('#type-row button').forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll('#type-row button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    curType = b.dataset.t;
+  };
+});
+
+const toImg = e => {
+  const r = wrap.getBoundingClientRect();
+  return [(e.clientX - r.left) / viewScale, (e.clientY - r.top) / viewScale];
+};
+
+wrap.addEventListener('mousedown', e => {
+  if (!imgW) return;
+  const [x, y] = toImg(e);
+  drawing = { x0: x, y0: y, el: document.createElement('div') };
+  drawing.el.className = 'box ' + curType;
+  wrap.appendChild(drawing.el);
+});
+window.addEventListener('mousemove', e => {
+  if (!drawing) return;
+  const [x, y] = toImg(e);
+  const rx = Math.min(drawing.x0, x), ry = Math.min(drawing.y0, y);
+  const rw = Math.abs(x - drawing.x0), rh = Math.abs(y - drawing.y0);
+  Object.assign(drawing.el.style, {
+    left: rx * viewScale + 'px', top: ry * viewScale + 'px',
+    width: rw * viewScale + 'px', height: rh * viewScale + 'px'
+  });
+});
+window.addEventListener('mouseup', e => {
+  if (!drawing) return;
+  const [x, y] = toImg(e);
+  const rx = Math.round(Math.min(drawing.x0, x)), ry = Math.round(Math.min(drawing.y0, y));
+  const rw = Math.round(Math.abs(x - drawing.x0)), rh = Math.round(Math.abs(y - drawing.y0));
+  drawing.el.remove();
+  drawing = null;
+  if (rw < 8 || rh < 8) return;
+  anns.push({ id: idSeq++, action: curType, at: (anns.length ? Math.max(...anns.map(a => a.at)) + 60 : 30), target: { x: rx, y: ry, width: rw, height: rh } });
+  renderBoxes(); renderList();
+});
+
+function renderBoxes() {
+  wrap.querySelectorAll('.box').forEach(el => el.remove());
+  anns.forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'box ' + a.action;
+    Object.assign(el.style, {
+      left: a.target.x * viewScale + 'px', top: a.target.y * viewScale + 'px',
+      width: a.target.width * viewScale + 'px', height: a.target.height * viewScale + 'px'
+    });
+    const tag = document.createElement('span');
+    tag.className = 'tag'; tag.textContent = `#${a.id} @${a.at}f`;
+    tag.style.color = COLORS[a.action];
+    el.appendChild(tag);
+    wrap.appendChild(el);
+  });
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const NAMES = {
+    circle: '圆圈',
+    highlight: '高亮',
+    underline: '下划线',
+    wavy: '波浪线',
+    arrow: '箭头',
+    cross: '打叉',
+    box: '方框',
+    focus: '聚焦'
+  };
+  anns.forEach(a => {
+    const row = document.createElement('div');
+    row.className = 'ann';
+    row.innerHTML = `<span class="dot" style="background:${COLORS[a.action]}"></span>
+      <div class="info"><b>#${a.id} ${NAMES[a.action]}</b><br>(${a.target.x}, ${a.target.y}) ${a.target.width}×${a.target.height}</div>`;
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.value = a.at; inp.title = '出现帧';
+    inp.onchange = () => { a.at = parseInt(inp.value) || 0; renderBoxes(); };
+    const del = document.createElement('button');
+    del.className = 'del'; del.textContent = 'x';
+    del.onclick = () => { anns = anns.filter(x => x.id !== a.id); renderBoxes(); renderList(); };
+    row.appendChild(inp); row.appendChild(del);
+    list.appendChild(row);
+  });
+
+  const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
+  const estFrames = Math.max(300, maxAt + 60);
+  const estSec = (estFrames / 30).toFixed(1);
+  const hintEl = document.getElementById('hint');
+  if (hintEl) {
+    hintEl.innerHTML = `当前共 <b>${anns.length}</b> 处标注 | 预计时长: <b>${estSec}s</b> (${estFrames} 帧) · Remotion 会自动自适应延长时间轴`;
+  }
+}
+
+function buildJSON() {
+  const imgPath = normalizePath(document.getElementById('img-path').value);
+  const normal = anns.filter(a => a.action !== 'focus');
+  const focus = anns.find(a => a.action === 'focus');
+  return {
+    image: imgPath,
+    imageWidth: imgW,
+    imageHeight: imgH,
+    grainOpacity: curTheme === 'dark' ? 0.12 : 0.25,
+    theme: curTheme,
+    cameraMode: 'auto',
+    annotations: normal.map(({ action, at, target }) => ({ action, at, target })),
+    focus: focus ? { at: focus.at, until: focus.at + 70, target: focus.target, dimOpacity: 0.68 } : undefined
+  };
+}
+
+document.getElementById('btn-copy').onclick = async () => {
+  await navigator.clipboard.writeText(JSON.stringify(buildJSON(), null, 2));
+  toast('已复制 JSON');
+};
+document.getElementById('btn-save').onclick = () => {
+  const imgPath = normalizePath(document.getElementById('img-path').value);
+  const name = (imgPath.split('/').pop() || 'script').replace(/\.[^.]+$/, '');
+  const jsonString = JSON.stringify(buildJSON(), null, 2);
+
+  Promise.all([
+    saveToProject('scripts/vox-script.json', jsonString),
+    saveToProject(`scripts/${name}.json`, jsonString),
+  ])
+    .then(() => toast('已成功保存到 public/scripts/vox-script.json！Studio 可即时播放'))
+    .catch(() => {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'vox-script.json';
+      a.click();
+      toast('已下载 vox-script.json，请放入 public/scripts/ 目录');
+    });
+};
+document.getElementById('btn-download').onclick = () => {
+  const blob = new Blob([JSON.stringify(buildJSON(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vox-script.json';
+  a.click();
+  toast('已下载, 放入 public/scripts/ 即可');
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "image": "screenshots/hockey-page.png",
+  "imageWidth": 1652,
+  "imageHeight": 1671,
+  "grainOpacity": 0.25,
+  "annotations": [
+    {
+      "action": "highlight",
+      "at": 30,
+      "target": {
+        "x": 690,
+        "y": 94,
+        "width": 753,
+        "height": 73
+      }
+    },
+    {
+      "action": "wavy",
+      "at": 90,
+      "target": {
+        "x": 76,
+        "y": 768,
+        "width": 557,
+        "height": 80
+      }
+    },
+    {
+      "action": "arrow",
+      "at": 150,
+      "target": {
+        "x": 98,
+        "y": 101,
+        "width": 267,
+        "height": 180
+      }
+    }
+  ],
+  "focus": {
+    "at": 210,
+    "until": 280,
+    "target": {
+      "x": 695,
+      "y": 522,
+      "width": 813,
+      "height": 146
+    },
+    "dimOpacity": 0.68
+  }
+}

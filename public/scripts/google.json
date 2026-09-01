@@ -1,0 +1,60 @@
+{
+  "image": "screenshots/google.jpg",
+  "imageWidth": 1833,
+  "imageHeight": 2048,
+  "grainOpacity": 0.12,
+  "theme": "dark",
+  "cameraMode": "auto",
+  "annotations": [
+    {
+      "action": "circle",
+      "at": 30,
+      "target": {
+        "x": 105,
+        "y": 79,
+        "width": 1190,
+        "height": 244
+      }
+    },
+    {
+      "action": "highlight",
+      "at": 90,
+      "target": {
+        "x": 764,
+        "y": 646,
+        "width": 405,
+        "height": 35
+      }
+    },
+    {
+      "action": "highlight",
+      "at": 150,
+      "target": {
+        "x": 235,
+        "y": 1019,
+        "width": 212,
+        "height": 76
+      }
+    },
+    {
+      "action": "highlight",
+      "at": 210,
+      "target": {
+        "x": 717,
+        "y": 1424,
+        "width": 704,
+        "height": 62
+      }
+    },
+    {
+      "action": "underline",
+      "at": 270,
+      "target": {
+        "x": 208,
+        "y": 1840,
+        "width": 1045,
+        "height": 64
+      }
+    }
+  ]
+}
