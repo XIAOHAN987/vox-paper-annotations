@@ -49,44 +49,54 @@ export const VoxCircle: React.FC<VoxCircleProps> = ({
 
     if (isWide) {
       // 针对宽幅文本(如整行文字圈选): 采用圆头胶囊椭圆(Stadium Oval), 左右两端保持完美圆弧, 绝不出现尖头橄榄形
-      const r = h / 2 + strokeWidth * 1.5;
+      const r = h / 2 + strokeWidth * 1.6;
       const xLeft = rect.x - strokeWidth * 0.8;
       const xRight = rect.x + w + strokeWidth * 0.8;
+      const straightW = Math.max(10, xRight - xLeft - 2 * r);
       const topY = cy - r;
       const botY = cy + r;
 
-      const STEPS = 24;
       const pts: [number, number][] = [];
 
-      // 上横线 (从左到右)
-      for (let i = 0; i <= 6; i++) {
-        const t = i / 6;
-        const px = xLeft + r + (xRight - xLeft - 2 * r) * t;
+      // 1. 上横线 (从左到右)
+      const nTop = 8;
+      for (let i = 0; i <= nTop; i++) {
+        const t = i / nTop;
+        const px = xLeft + r + straightW * t;
         const py = topY + pseudo(i) * strokeWidth * 0.35;
         pts.push([px, py]);
       }
 
-      // 右半圆弧 (圆润自然, 不尖锐)
-      for (let i = 1; i <= 6; i++) {
-        const a = -Math.PI / 2 + (i / 6) * Math.PI;
+      // 2. 右半圆弧 (顺时针: -90° 到 +90°)
+      const nArc = 8;
+      for (let i = 1; i <= nArc; i++) {
+        const a = -Math.PI / 2 + (i / nArc) * Math.PI;
         const px = xRight - r + Math.cos(a) * (r + pseudo(i + 10) * strokeWidth * 0.3);
         const py = cy + Math.sin(a) * (r + pseudo(i + 10) * strokeWidth * 0.3);
         pts.push([px, py]);
       }
 
-      // 下横线 (从右到左)
-      for (let i = 1; i <= 6; i++) {
-        const t = i / 6;
-        const px = xRight - r - (xRight - xLeft - 2 * r) * t;
+      // 3. 下横线 (从右到左)
+      for (let i = 1; i <= nTop; i++) {
+        const t = i / nTop;
+        const px = xRight - r - straightW * t;
         const py = botY + pseudo(i + 20) * strokeWidth * 0.35;
         pts.push([px, py]);
       }
 
-      // 左半圆弧 (圆润收口, 略带自然搭接)
-      for (let i = 1; i <= 7; i++) {
-        const a = Math.PI / 2 + (i / 6) * Math.PI;
+      // 4. 左半圆弧 (顺时针: +90° 到 +270°/回到顶部)
+      for (let i = 1; i <= nArc; i++) {
+        const a = Math.PI / 2 + (i / nArc) * Math.PI;
         const px = xLeft + r + Math.cos(a) * (r + pseudo(i + 30) * strokeWidth * 0.3);
         const py = cy + Math.sin(a) * (r + pseudo(i + 30) * strokeWidth * 0.3);
+        pts.push([px, py]);
+      }
+
+      // 5. 收笔自然搭接出头 (向右多画 20px, 模拟手工画圈首尾闭合相交)
+      for (let i = 1; i <= 3; i++) {
+        const t = i / 3;
+        const px = xLeft + r + (straightW * 0.25) * t;
+        const py = topY - 1.5 + pseudo(i + 45) * strokeWidth * 0.3;
         pts.push([px, py]);
       }
 
@@ -98,24 +108,32 @@ export const VoxCircle: React.FC<VoxCircleProps> = ({
         const my = (prev[1] + curr[1]) / 2 + pseudo(i + 7) * strokeWidth * 0.2;
         path += ` Q ${mx.toFixed(1)} ${my.toFixed(1)} ${curr[0].toFixed(1)} ${curr[1].toFixed(1)}`;
       }
-      totalLength = (w + h * Math.PI) * 1.35;
+
+      // 精确累加所有线段长度，确保 100% 完整闭合
+      for (let i = 1; i < pts.length; i++) {
+        totalLength += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      }
+      totalLength *= 1.06;
     } else {
       // 标准手绘椭圆
       const rx = w / 2 + strokeWidth * 1.8;
       const ry = h / 2 + strokeWidth * 1.6;
-      const STEPS = 18;
+      const STEPS = 20;
       let startAngle = -Math.PI / 2;
+      const pts: [number, number][] = [];
       for (let i = 0; i <= STEPS; i++) {
-        const a = startAngle + (i / (STEPS - 2)) * Math.PI * 2;
+        const a = startAngle + (i / (STEPS - 3)) * Math.PI * 2;
         const wVal = pseudo(i) * strokeWidth * 0.4;
         const px = cx + Math.cos(a) * (rx + wVal);
         const py = cy + Math.sin(a) * (ry + wVal);
-        if (i === 0) path += `M ${px.toFixed(1)} ${py.toFixed(1)}`;
-        else {
-          path += ` L ${px.toFixed(1)} ${py.toFixed(1)}`;
-        }
+        pts.push([px, py]);
       }
-      totalLength = Math.PI * 2 * Math.sqrt((rx * rx + ry * ry) / 2) * 1.25;
+      path = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+      for (let i = 1; i < pts.length; i++) {
+        path += ` L ${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}`;
+        totalLength += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      }
+      totalLength *= 1.06;
     }
 
     return { d: path, length: totalLength };
