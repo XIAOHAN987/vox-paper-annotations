@@ -1,83 +1,164 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>VOX 标注工具</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VOX 可视化标注与实时动效工作台</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif; background: #1a1a1a; color: #eee; display: flex; height: 100vh; overflow: hidden; }
-  #stage { flex: 1; overflow: auto; position: relative; background: #111; }
-  #canvas-wrap { position: relative; display: inline-block; cursor: crosshair; }
-  #canvas-wrap img { display: block; user-select: none; -webkit-user-drag: none; }
-  .box { position: absolute; border: 2px solid; pointer-events: none; }
-  .box.circle { border-color: #3b82f6; border-radius: 50%; }
-  .box.highlight { border-color: #eab308; background: rgba(253,224,71,.25); }
-  .box.underline { border-color: #ef4444; border-bottom-width: 5px; }
-  .box.wavy { border-color: #f43f5e; border-bottom-style: dotted; border-bottom-width: 4px; }
-  .box.arrow { border-color: #2563eb; border-style: dashed; }
-  .box.cross { border-color: #dc2626; }
-  .box.box { border-color: #0284c7; border-style: solid; }
-  .box.focus { border-color: #a855f7; border-style: dashed; }
-  .box .tag { position: absolute; top: -22px; left: 0; font-size: 11px; background: #000; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
-  #panel { width: 360px; background: #222; border-left: 1px solid #333; display: flex; flex-direction: column; }
-  #panel header { padding: 14px; border-bottom: 1px solid #333; }
-  #panel header h1 { font-size: 15px; margin-bottom: 8px; }
-  #img-row { display: flex; gap: 6px; }
-  #img-row input { flex: 1; background: #111; border: 1px solid #444; color: #eee; padding: 5px 8px; border-radius: 4px; font-size: 12px; }
-  #img-row button { background: #3b82f6; border: 0; color: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-  #type-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 14px; border-bottom: 1px solid #333; }
-  #type-row button { padding: 7px 4px; border: 1px solid #444; background: #2a2a2a; color: #ccc; border-radius: 5px; cursor: pointer; font-size: 12px; text-align: center; }
-  #type-row button.active { border-color: currentColor; font-weight: 600; }
-  #type-row button[data-t="circle"] { color: #60a5fa; } #type-row button[data-t="circle"].active { background: #1e3a5f; }
-  #type-row button[data-t="highlight"] { color: #facc15; } #type-row button[data-t="highlight"].active { background: #4a3d0a; }
-  #type-row button[data-t="underline"] { color: #f87171; } #type-row button[data-t="underline"].active { background: #4a1515; }
-  #type-row button[data-t="wavy"] { color: #fb7185; } #type-row button[data-t="wavy"].active { background: #4c1d24; }
-  #type-row button[data-t="arrow"] { color: #93c5fd; } #type-row button[data-t="arrow"].active { background: #1e3a8a; }
-  #type-row button[data-t="cross"] { color: #fca5a5; } #type-row button[data-t="cross"].active { background: #7f1d1d; }
-  #type-row button[data-t="box"] { color: #38bdf8; } #type-row button[data-t="box"].active { background: #0c4a6e; }
-  #type-row button[data-t="focus"] { color: #c084fc; } #type-row button[data-t="focus"].active { background: #3b1f5e; }
-  #list { flex: 1; overflow: auto; padding: 8px 14px; }
-  .ann { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid #333; border-radius: 5px; margin-bottom: 6px; font-size: 12px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0; background: #0c0d12; color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; height: 100vh; overflow: hidden;
+  }
+  #stage {
+    flex: 1; height: 100vh; overflow: auto; position: relative;
+    background: #090a0f; display: flex; align-items: center; justify-content: center;
+    border-right: 1px solid #1e293b; user-select: none;
+  }
+  #canvas-wrap { position: relative; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+  #canvas-wrap img { display: block; max-width: none; pointer-events: none; }
+  .box {
+    position: absolute; border: 2px dashed #38bdf8; background: rgba(56, 189, 248, 0.15);
+    pointer-events: none; z-index: 10;
+  }
+  .box.circle { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); border-radius: 999px; }
+  .box.highlight { border-color: #fde047; background: rgba(253, 224, 71, 0.35); }
+  .box.underline { border-color: #f87171; background: transparent; border-bottom: 3px solid #f87171; }
+  .box.wavy { border-color: #fb7185; background: transparent; border-bottom: 3px dashed #fb7185; }
+  .box.arrow { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+  .box.cross { border-color: #ef4444; background: rgba(239, 68, 68, 0.15); }
+  .box.box-tool { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+  .box.focus { border-color: #c084fc; background: rgba(192, 132, 252, 0.2); }
+
+  .badge {
+    position: absolute; top: -18px; left: 0; font-size: 11px;
+    background: #0284c7; color: #fff; padding: 1px 6px; border-radius: 3px; font-weight: bold;
+    white-space: nowrap; pointer-events: none;
+  }
+  #panel {
+    width: 360px; height: 100vh; background: #11141c; display: flex; flex-direction: column;
+    border-left: 1px solid #1e293b; z-index: 20;
+  }
+  header { padding: 16px; border-bottom: 1px solid #1e293b; }
+  h1 { font-size: 15px; margin: 0 0 12px 0; font-weight: 600; color: #f8fafc; }
+  .btn-primary {
+    background: #2563eb; color: #fff; border: none; padding: 7px 12px; border-radius: 5px;
+    font-size: 12px; cursor: pointer; font-weight: 500; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-upload {
+    width: 100%; padding: 9px 12px; background: #0f766e; color: #fff; border: 1px dashed #2dd4bf;
+    border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center;
+    margin-bottom: 10px; transition: all 0.2s;
+  }
+  .btn-upload:hover { background: #115e59; border-color: #5eead4; }
+
+  #type-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    padding: 12px 16px; border-bottom: 1px solid #1e293b; background: #0b0e14;
+  }
+  #type-row button {
+    background: #1e293b; border: 1px solid #334155; color: #cbd5e1;
+    padding: 7px 0; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all .15s;
+  }
+  #type-row button:hover { background: #334155; }
+  #type-row button.active { background: #38bdf8; color: #0f172a; font-weight: 700; border-color: #38bdf8; }
+
+  #list { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .ann {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+    margin-bottom: 8px; font-size: 12px;
+  }
   .ann .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .ann .info { flex: 1; line-height: 1.4; color: #bbb; }
-  .ann .info b { color: #eee; }
-  .ann input { width: 52px; background: #111; border: 1px solid #444; color: #eee; padding: 2px 5px; border-radius: 3px; font-size: 12px; }
-  .ann .del { background: none; border: 0; color: #888; cursor: pointer; font-size: 14px; }
-  .ann .del:hover { color: #f87171; }
-  #actions { padding: 12px 14px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 8px; }
-  #actions .row { display: flex; gap: 8px; }
-  #actions button { flex: 1; padding: 9px; border: 0; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .ann .info { flex: 1; color: #94a3b8; line-height: 1.3; font-size: 11px; }
+  .ann .info b { color: #f1f5f9; font-size: 12px; }
+  .ann input {
+    width: 54px; background: #0f172a; border: 1px solid #475569;
+    color: #38bdf8; text-align: center; border-radius: 4px; padding: 3px; font-weight: 600;
+  }
+  .ann .del {
+    background: #dc2626; color: #fff; border: none; width: 20px; height: 20px;
+    border-radius: 4px; cursor: pointer; font-size: 11px; line-height: 1;
+  }
+
+  #actions { padding: 14px 16px; border-top: 1px solid #1e293b; display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; gap: 8px; }
+  .row button {
+    flex: 1; padding: 9px; border: none; border-radius: 5px; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: opacity .15s;
+  }
+  .row button:hover { opacity: 0.9; }
+  #btn-preview { background: #0284c7; color: #fff; font-size: 13px; }
+  #btn-save { background: #7c3aed; color: #fff; }
   #btn-copy { background: #16a34a; color: #fff; }
-  #btn-download { background: #333; color: #eee; border: 1px solid #555 !important; }
-  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #16a34a; color: #fff; padding: 8px 18px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
-  #hint { padding: 8px 14px; font-size: 11px; color: #777; border-top: 1px solid #333; }
+  #btn-download { background: #334155; color: #f1f5f9; border: 1px solid #475569 !important; }
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #10b981; color: #fff; padding: 9px 20px; border-radius: 6px;
+    font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 100; font-weight: 500;
+  }
+  #hint { padding: 10px 16px; font-size: 11px; color: #64748b; border-top: 1px solid #1e293b; line-height: 1.4; }
+
+  /* 实时动效播放器 Modal */
+  #modal-preview {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 200; flex-direction: column;
+  }
+  #player-box {
+    width: 960px; height: 540px; background: #000; position: relative; overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.9); border: 1px solid #334155; border-radius: 8px;
+  }
+  #player-controls {
+    width: 960px; display: flex; align-items: center; gap: 12px; margin-top: 12px;
+    background: #11141c; padding: 10px 16px; border-radius: 8px; border: 1px solid #1e293b;
+  }
+  #player-controls button {
+    background: #2563eb; color: #fff; border: none; padding: 6px 14px; border-radius: 4px;
+    cursor: pointer; font-weight: 600; font-size: 12px;
+  }
+  #player-seek { flex: 1; accent-color: #38bdf8; cursor: pointer; }
 </style>
 </head>
 <body>
-  <div id="stage"><div id="canvas-wrap"></div></div>
+  <div id="stage">
+    <div id="canvas-wrap">
+      <div id="drop-hint" style="padding: 40px; text-align: center; color: #64748b;">
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #94a3b8;">拖拽图片到此，或在右侧点击上传</div>
+        <div style="font-size: 12px;">支持 PNG / JPG / WebP 高清截图与论文 PDF 转图</div>
+      </div>
+    </div>
+  </div>
+
   <div id="panel">
     <header>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <h1 style="margin:0;">VOX 标注工具</h1>
-        <a href="/" style="font-size:12px;color:#38bdf8;text-decoration:none;border:1px solid #0284c7;padding:3px 8px;border-radius:4px;">播放器预览 &rarr;</a>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h1 style="margin:0;">VOX 标注动效工作台</h1>
+        <span style="font-size:11px;color:#38bdf8;background:#0c4a6e;padding:2px 6px;border-radius:4px;">Web 极速版</span>
       </div>
-      <div id="img-row">
-        <input id="img-path" list="known-images" placeholder="相对路径 如 screenshots/hockey-page.png">
+
+      <input type="file" id="file-input" accept="image/*" style="display:none;">
+      <button class="btn-upload" id="btn-upload-file">上传本地图片 (或拖入左侧)</button>
+
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input id="img-path" list="known-images" placeholder="或输入路径/URL" style="flex:1;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:5px 8px;border-radius:4px;font-size:12px;">
         <datalist id="known-images">
           <option value="screenshots/hockey-page.png"></option>
           <option value="textures/newspaper.jpg"></option>
         </datalist>
-        <button id="btn-load">加载</button>
+        <button class="btn-primary" id="btn-load">加载</button>
       </div>
-      <div id="img-err" style="display:none;color:#f87171;font-size:12px;margin-top:6px;"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-        <span style="font-size:12px;color:#aaa;">底色模式:</span>
-        <select id="theme-select" style="flex:1;background:#222;color:#eee;border:1px solid #444;padding:4px 8px;border-radius:4px;font-size:12px;outline:none;">
+
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:#94a3b8;">底色模式:</span>
+        <select id="theme-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;">
           <option value="light">浅色纸张 / 白底报纸 (Light)</option>
           <option value="dark">暗黑模式 / 纯黑推特 (Dark)</option>
         </select>
       </div>
     </header>
+
     <div id="type-row">
       <button data-t="circle" class="active">圆圈</button>
       <button data-t="highlight">高亮</button>
@@ -85,47 +166,62 @@
       <button data-t="wavy">波浪线</button>
       <button data-t="arrow">箭头</button>
       <button data-t="cross">打叉</button>
-      <button data-t="box">方框</button>
+      <button data-t="box-tool">方框</button>
       <button data-t="focus">聚焦</button>
     </div>
+
     <div id="list"></div>
+
     <div id="actions">
       <div class="row">
-        <button id="btn-save" style="background:#7c3aed;color:#fff;">保存到项目</button>
+        <button id="btn-preview">▶ 在线实时动效预览 (60fps)</button>
       </div>
       <div class="row">
-        <button id="btn-copy">复制 JSON</button>
-        <button id="btn-download">下载 .json</button>
+        <button id="btn-save">保存为独立脚本 (.json)</button>
+      </div>
+      <div class="row">
+        <button id="btn-copy">复制 JSON 数据</button>
+        <button id="btn-download">下载 .json 文件</button>
       </div>
     </div>
-    <div id="hint">在图上拖框即标注 · at = 出现帧 · 导出后粘贴到 Composition 的 scriptFile 对应 JSON</div>
+
+    <div id="hint">在图上拖框即标注 · 点击「在线实时动效预览」可直接在网页模拟相机运镜与手绘生长</div>
   </div>
+
+  <!-- 实时动效播放器 Modal -->
+  <div id="modal-preview">
+    <div id="player-box">
+      <canvas id="preview-canvas" width="1920" height="1080" style="width:100%;height:100%;display:block;"></canvas>
+    </div>
+    <div id="player-controls">
+      <button id="btn-play-pause">暂停</button>
+      <button id="btn-restart">重播</button>
+      <input type="range" id="player-seek" min="0" max="300" value="0">
+      <span id="player-time" style="font-size:12px;color:#94a3b8;font-family:monospace;">00:00 / 00:10</span>
+      <button id="btn-close-modal" style="background:#dc2626;">关闭预览</button>
+    </div>
+  </div>
+
   <div id="toast">已复制</div>
+
 <script>
 let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'light', anns = [], drawing = null, idSeq = 1;
+let currentImgElement = null;
+let uploadedDataUrl = '';
+let uploadedFileName = 'custom-image.png';
+
 const wrap = document.getElementById('canvas-wrap');
 const LIGHT_COLORS = {
-  circle: '#3b82f6',
-  highlight: '#eab308',
-  underline: '#ef4444',
-  wavy: '#f43f5e',
-  arrow: '#2563eb',
-  cross: '#dc2626',
-  box: '#0284c7',
-  focus: '#a855f7'
+  circle: '#3b82f6', highlight: '#eab308', underline: '#ef4444', wavy: '#f43f5e',
+  arrow: '#2563eb', cross: '#dc2626', 'box-tool': '#0284c7', focus: '#a855f7'
 };
 const DARK_COLORS = {
-  circle: '#60a5fa',
-  highlight: '#fde047',
-  underline: '#f87171',
-  wavy: '#fb7185',
-  arrow: '#38bdf8',
-  cross: '#ef4444',
-  box: '#38bdf8',
-  focus: '#c084fc'
+  circle: '#60a5fa', highlight: '#fde047', underline: '#f87171', wavy: '#fb7185',
+  arrow: '#38bdf8', cross: '#ef4444', 'box-tool': '#38bdf8', focus: '#c084fc'
 };
 let COLORS = LIGHT_COLORS;
 
+// 主题切换
 document.getElementById('theme-select').onchange = (e) => {
   curTheme = e.target.value;
   COLORS = curTheme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
@@ -133,83 +229,89 @@ document.getElementById('theme-select').onchange = (e) => {
   renderList();
 };
 
-const STATIC_BASE = (location.pathname.match(/^\/static-[^/]+/) || [''])[0];
-const assetUrl = (rel) => STATIC_BASE + '/' + rel.replace(/^\/+/, '');
-const saveToProject = async (rel, content) => {
-  try {
-    const res = await fetch('/api/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: rel, content: JSON.parse(content) }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) return data;
-    }
-  } catch (_) {}
-
-  if (STATIC_BASE) {
-    const res = await fetch(`${STATIC_BASE}/api/add-asset?filePath=${encodeURIComponent(rel)}`, {
-      method: 'POST', body: content,
-    });
-    const j = await res.json();
-    if (j.success) return j;
-  }
-
-  throw new Error('no-api');
-};
+// 按钮类型切换
+const typeBtns = document.querySelectorAll('#type-row button');
+typeBtns.forEach(btn => {
+  btn.onclick = () => {
+    typeBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    curType = btn.dataset.t;
+  };
+});
 
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.opacity = 1;
-  setTimeout(() => t.style.opacity = 0, 1500);
+  setTimeout(() => t.style.opacity = 0, 2000);
 }
 
-function normalizePath(raw) {
-  let p = raw.trim().replace(/^["']|["']$/g, '').replace(/\\/g, '/');
-  const m = p.match(/public\/(.+)$/i);
-  if (m) p = m[1];
-  p = p.replace(/^\/+/, '');
-  return p;
-}
-
-document.getElementById('btn-load').onclick = () => {
-  const p = normalizePath(document.getElementById('img-path').value);
-  const errEl = document.getElementById('img-err');
-  errEl.style.display = 'none';
-  if (!p) { errEl.textContent = '请输入图片路径'; errEl.style.display = 'block'; return; }
-  document.getElementById('img-path').value = p;
+function loadImgFromSrc(src, fileName = 'custom-image.png') {
   const img = new Image();
   img.onload = () => {
-    imgW = img.naturalWidth; imgH = img.naturalHeight;
+    imgW = img.naturalWidth;
+    imgH = img.naturalHeight;
+    currentImgElement = img;
     wrap.innerHTML = '';
     wrap.appendChild(img);
     const fit = () => {
       viewScale = Math.min(1, (document.getElementById('stage').clientWidth - 40) / imgW);
-      img.style.width = imgW * viewScale + 'px';
+      img.style.width = (imgW * viewScale) + 'px';
       renderBoxes();
     };
     fit();
     window.onresize = fit;
-    anns = []; renderList();
-    toast(`已加载 ${imgW}×${imgH}`);
+    anns = [];
+    renderList();
+    toast(`已成功载入图片: ${imgW}×${imgH}`);
   };
-  img.onerror = () => {
-    errEl.textContent = `加载失败: ${assetUrl(p)} — 确认文件在 public/ 目录下, 用相对路径(如 screenshots/xxx.png)`;
-    errEl.style.display = 'block';
+  img.onerror = () => toast('图片加载失败，请检查网络或格式');
+  img.src = src;
+}
+
+// 本地文件上传
+const fileInput = document.getElementById('file-input');
+document.getElementById('btn-upload-file').onclick = () => fileInput.click();
+fileInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  uploadedFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    uploadedDataUrl = evt.target.result;
+    loadImgFromSrc(uploadedDataUrl, file.name);
   };
-  img.src = assetUrl(p);
+  reader.readAsDataURL(file);
 };
 
-document.querySelectorAll('#type-row button').forEach(b => {
-  b.onclick = () => {
-    document.querySelectorAll('#type-row button').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    curType = b.dataset.t;
-  };
+// 拖拽上传
+const stage = document.getElementById('stage');
+stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.style.background = '#1e293b'; });
+stage.addEventListener('dragleave', () => { stage.style.background = '#090a0f'; });
+stage.addEventListener('drop', (e) => {
+  e.preventDefault(); stage.style.background = '#090a0f';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    uploadedFileName = file.name;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      uploadedDataUrl = evt.target.result;
+      loadImgFromSrc(uploadedDataUrl, file.name);
+    };
+    reader.readAsDataURL(file);
+  }
 });
 
-const toImg = e => {
+// 手动路径/URL加载
+document.getElementById('btn-load').onclick = () => {
+  const p = document.getElementById('img-path').value.trim();
+  if (!p) return toast('请输入路径或 URL');
+  uploadedFileName = p.split('/').pop() || 'image.png';
+  uploadedDataUrl = p;
+  loadImgFromSrc(p, uploadedFileName);
+};
+
+// 坐标转换与拖拽框选
+const toImg = (e) => {
   const r = wrap.getBoundingClientRect();
   return [(e.clientX - r.left) / viewScale, (e.clientY - r.top) / viewScale];
 };
@@ -221,16 +323,18 @@ wrap.addEventListener('mousedown', e => {
   drawing.el.className = 'box ' + curType;
   wrap.appendChild(drawing.el);
 });
+
 window.addEventListener('mousemove', e => {
   if (!drawing) return;
   const [x, y] = toImg(e);
   const rx = Math.min(drawing.x0, x), ry = Math.min(drawing.y0, y);
   const rw = Math.abs(x - drawing.x0), rh = Math.abs(y - drawing.y0);
   Object.assign(drawing.el.style, {
-    left: rx * viewScale + 'px', top: ry * viewScale + 'px',
-    width: rw * viewScale + 'px', height: rh * viewScale + 'px'
+    left: (rx * viewScale) + 'px', top: (ry * viewScale) + 'px',
+    width: (rw * viewScale) + 'px', height: (rh * viewScale) + 'px'
   });
 });
+
 window.addEventListener('mouseup', e => {
   if (!drawing) return;
   const [x, y] = toImg(e);
@@ -238,25 +342,29 @@ window.addEventListener('mouseup', e => {
   const rw = Math.round(Math.abs(x - drawing.x0)), rh = Math.round(Math.abs(y - drawing.y0));
   drawing.el.remove();
   drawing = null;
-  if (rw < 8 || rh < 8) return;
-  anns.push({ id: idSeq++, action: curType, at: (anns.length ? Math.max(...anns.map(a => a.at)) + 60 : 30), target: { x: rx, y: ry, width: rw, height: rh } });
+  if (rw < 10 || rh < 10) return;
+  const actionName = curType === 'box-tool' ? 'box' : curType;
+  anns.push({
+    id: idSeq++,
+    action: actionName,
+    at: (anns.length ? Math.max(...anns.map(a => a.at)) + 60 : 30),
+    target: { x: rx, y: ry, width: rw, height: rh }
+  });
   renderBoxes(); renderList();
 });
 
 function renderBoxes() {
-  wrap.querySelectorAll('.box').forEach(el => el.remove());
+  document.querySelectorAll('#canvas-wrap .box').forEach(b => b.remove());
   anns.forEach(a => {
-    const el = document.createElement('div');
-    el.className = 'box ' + a.action;
-    Object.assign(el.style, {
-      left: a.target.x * viewScale + 'px', top: a.target.y * viewScale + 'px',
-      width: a.target.width * viewScale + 'px', height: a.target.height * viewScale + 'px'
-    });
-    const tag = document.createElement('span');
-    tag.className = 'tag'; tag.textContent = `#${a.id} @${a.at}f`;
-    tag.style.color = COLORS[a.action];
-    el.appendChild(tag);
-    wrap.appendChild(el);
+    const d = document.createElement('div');
+    const className = a.action === 'box' ? 'box-tool' : a.action;
+    d.className = 'box ' + className;
+    d.style.left = (a.target.x * viewScale) + 'px';
+    d.style.top = (a.target.y * viewScale) + 'px';
+    d.style.width = (a.target.width * viewScale) + 'px';
+    d.style.height = (a.target.height * viewScale) + 'px';
+    d.innerHTML = `<span class="badge">#${a.id} @${a.at}f</span>`;
+    wrap.appendChild(d);
   });
 }
 
@@ -264,23 +372,18 @@ function renderList() {
   const list = document.getElementById('list');
   list.innerHTML = '';
   const NAMES = {
-    circle: '圆圈',
-    highlight: '高亮',
-    underline: '下划线',
-    wavy: '波浪线',
-    arrow: '箭头',
-    cross: '打叉',
-    box: '方框',
-    focus: '聚焦'
+    circle: '圆圈', highlight: '高亮', underline: '下划线', wavy: '波浪线',
+    arrow: '箭头', cross: '打叉', box: '方框', focus: '聚焦'
   };
   anns.forEach(a => {
     const row = document.createElement('div');
     row.className = 'ann';
-    row.innerHTML = `<span class="dot" style="background:${COLORS[a.action]}"></span>
+    const colorKey = a.action === 'box' ? 'box-tool' : a.action;
+    row.innerHTML = `<span class="dot" style="background:${COLORS[colorKey]}"></span>
       <div class="info"><b>#${a.id} ${NAMES[a.action]}</b><br>(${a.target.x}, ${a.target.y}) ${a.target.width}×${a.target.height}</div>`;
     const inp = document.createElement('input');
-    inp.type = 'number'; inp.value = a.at; inp.title = '出现帧';
-    inp.onchange = () => { a.at = parseInt(inp.value) || 0; renderBoxes(); };
+    inp.type = 'number'; inp.value = a.at; inp.title = '触发帧';
+    inp.onchange = () => { a.at = parseInt(inp.value) || 0; renderBoxes(); renderList(); };
     const del = document.createElement('button');
     del.className = 'del'; del.textContent = 'x';
     del.onclick = () => { anns = anns.filter(x => x.id !== a.id); renderBoxes(); renderList(); };
@@ -293,57 +396,193 @@ function renderList() {
   const estSec = (estFrames / 30).toFixed(1);
   const hintEl = document.getElementById('hint');
   if (hintEl) {
-    hintEl.innerHTML = `当前共 <b>${anns.length}</b> 处标注 | 预计时长: <b>${estSec}s</b> (${estFrames} 帧) · Remotion 会自动自适应延长时间轴`;
+    hintEl.innerHTML = `当前共 <b>${anns.length}</b> 处标注 | 预计总时长: <b>${estSec}s</b> (${estFrames} 帧) · 包含自适应呼吸缓冲`;
   }
 }
 
 function buildJSON() {
-  const imgPath = normalizePath(document.getElementById('img-path').value);
   const normal = anns.filter(a => a.action !== 'focus');
   const focus = anns.find(a => a.action === 'focus');
+  const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
+  const totalFrames = Math.max(300, maxAt + 60);
+
   return {
-    image: imgPath,
-    imageWidth: imgW,
-    imageHeight: imgH,
+    image: uploadedDataUrl || "screenshots/hockey-page.png",
+    imageWidth: imgW || 1920,
+    imageHeight: imgH || 1080,
+    durationInFrames: totalFrames,
     grainOpacity: curTheme === 'dark' ? 0.12 : 0.25,
     theme: curTheme,
-    cameraMode: 'auto',
+    cameraMode: "auto",
     annotations: normal.map(({ action, at, target }) => ({ action, at, target })),
     focus: focus ? { at: focus.at, until: focus.at + 70, target: focus.target, dimOpacity: 0.68 } : undefined
   };
 }
 
+// 导出与保存
 document.getElementById('btn-copy').onclick = async () => {
-  await navigator.clipboard.writeText(JSON.stringify(buildJSON(), null, 2));
-  toast('已复制 JSON');
+  const jsonStr = JSON.stringify(buildJSON(), null, 2);
+  await navigator.clipboard.writeText(jsonStr);
+  toast('已复制 JSON 到剪贴板');
 };
-document.getElementById('btn-save').onclick = () => {
-  const imgPath = normalizePath(document.getElementById('img-path').value);
-  const name = (imgPath.split('/').pop() || 'script').replace(/\.[^.]+$/, '');
-  const jsonString = JSON.stringify(buildJSON(), null, 2);
 
-  Promise.all([
-    saveToProject('scripts/vox-script.json', jsonString),
-    saveToProject(`scripts/${name}.json`, jsonString),
-  ])
-    .then(() => toast('已成功保存到 public/scripts/vox-script.json！Studio 可即时播放'))
-    .catch(() => {
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'vox-script.json';
-      a.click();
-      toast('已下载 vox-script.json，请放入 public/scripts/ 目录');
-    });
-};
-document.getElementById('btn-download').onclick = () => {
-  const blob = new Blob([JSON.stringify(buildJSON(), null, 2)], { type: 'application/json' });
+document.getElementById('btn-download').onclick = document.getElementById('btn-save').onclick = () => {
+  const jsonStr = JSON.stringify(buildJSON(), null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'vox-script.json';
+  a.download = `vox-script-${Date.now()}.json`;
   a.click();
-  toast('已下载, 放入 public/scripts/ 即可');
+  toast('已成功导出完整自包含 JSON 文件');
 };
+
+// -------------------------------------------------------------
+// 在线 60fps 实时运镜与手绘渲染模拟器 (Live Motion Canvas)
+// -------------------------------------------------------------
+let isPlaying = false, animFrameId = null, currentFrame = 0;
+const canvas = document.getElementById('preview-canvas');
+const ctx = canvas.getContext('2d');
+const modal = document.getElementById('modal-preview');
+const seek = document.getElementById('player-seek');
+const timeEl = document.getElementById('player-time');
+
+document.getElementById('btn-preview').onclick = () => {
+  if (!imgW || !currentImgElement) return toast('请先上传或加载图片');
+  const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
+  const totalFrames = Math.max(300, maxAt + 60);
+  seek.max = totalFrames;
+  modal.style.display = 'flex';
+  currentFrame = 0;
+  isPlaying = true;
+  playLoop();
+};
+
+document.getElementById('btn-close-modal').onclick = () => {
+  modal.style.display = 'none';
+  isPlaying = false;
+  cancelAnimationFrame(animFrameId);
+};
+
+document.getElementById('btn-play-pause').onclick = (e) => {
+  isPlaying = !isPlaying;
+  e.target.textContent = isPlaying ? '暂停' : '播放';
+  if (isPlaying) playLoop();
+};
+
+document.getElementById('btn-restart').onclick = () => {
+  currentFrame = 0;
+  isPlaying = true;
+  document.getElementById('btn-play-pause').textContent = '暂停';
+  playLoop();
+};
+
+seek.oninput = (e) => {
+  currentFrame = parseInt(e.target.value);
+  renderFrame(currentFrame);
+};
+
+function playLoop() {
+  if (!isPlaying) return;
+  const totalFrames = parseInt(seek.max);
+  currentFrame++;
+  if (currentFrame > totalFrames) currentFrame = 0;
+  seek.value = currentFrame;
+  renderFrame(currentFrame);
+  animFrameId = requestAnimationFrame(playLoop);
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function renderFrame(frame) {
+  const totalFrames = parseInt(seek.max);
+  timeEl.textContent = `${(frame / 30).toFixed(1)}s / ${(totalFrames / 30).toFixed(1)}s`;
+
+  ctx.fillStyle = curTheme === 'dark' ? '#0a0b0e' : '#111';
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  if (!currentImgElement) return;
+
+  // 计算相机轨迹
+  const scale = 1920 / imgW;
+  const docW = 1920, docH = imgH * scale;
+
+  let targetX = docW / 2, targetY = docH * 0.35, targetZoom = 1.0;
+  const sortedAnns = [...anns].sort((a, b) => a.at - b.at);
+
+  let curTarget = sortedAnns[0];
+  for (let a of sortedAnns) {
+    if (frame >= a.at - 15) curTarget = a;
+  }
+
+  if (curTarget) {
+    const cx = (curTarget.target.x + curTarget.target.width / 2) * scale;
+    const cy = (curTarget.target.y + curTarget.target.height / 2) * scale;
+    const isFocus = curTarget.action === 'focus';
+    const zoom = isFocus ? 1.95 : 1.45;
+    const p = Math.min(1, Math.max(0, (frame - (curTarget.at - 24)) / 24));
+    const smoothP = easeInOutCubic(p);
+    targetX = 960 * (1 - smoothP) + cx * smoothP;
+    targetY = (docH * 0.35) * (1 - smoothP) + cy * smoothP;
+    targetZoom = 0.9 * (1 - smoothP) + zoom * smoothP;
+  }
+
+  ctx.save();
+  ctx.translate(960, 540);
+  ctx.scale(targetZoom, targetZoom);
+  ctx.translate(-targetX, -targetY);
+
+  // 绘制底图
+  ctx.drawImage(currentImgElement, 0, 0, docW, docH);
+
+  // 绘制标注
+  sortedAnns.forEach(a => {
+    if (frame < a.at) return;
+    const localF = frame - a.at;
+    const dur = 18;
+    const progress = Math.min(1, localF / dur);
+    const smoothP = 1 - Math.pow(1 - progress, 3);
+    const tx = a.target.x * scale, ty = a.target.y * scale;
+    const tw = a.target.width * scale, th = a.target.height * scale;
+    const col = curTheme === 'dark' ? '#38bdf8' : '#1d4ed8';
+    const redCol = curTheme === 'dark' ? '#f87171' : '#dc2626';
+    const yelCol = curTheme === 'dark' ? '#fde047' : '#eab308';
+
+    ctx.save();
+    if (a.action === 'circle') {
+      ctx.strokeStyle = col; ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.ellipse(tx + tw/2, ty + th/2, tw/2 + 10, th/2 + 8, -0.03, 0, Math.PI * 2 * smoothP);
+      ctx.stroke();
+    } else if (a.action === 'underline') {
+      ctx.strokeStyle = redCol; ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty + th + 4);
+      ctx.lineTo(tx + tw * smoothP, ty + th + 4);
+      ctx.stroke();
+    } else if (a.action === 'highlight') {
+      ctx.fillStyle = yelCol; ctx.globalAlpha = 0.55;
+      ctx.fillRect(tx, ty, tw * smoothP, th);
+    } else if (a.action === 'box') {
+      ctx.strokeStyle = col; ctx.lineWidth = 5;
+      ctx.strokeRect(tx, ty, tw, th);
+    } else if (a.action === 'focus') {
+      ctx.fillStyle = 'rgba(0,0,0,0.68)';
+      // 遮罩四周
+      ctx.fillRect(-2000, -2000, 6000, ty + 2000);
+      ctx.fillRect(-2000, ty + th, 6000, 4000);
+      ctx.fillRect(-2000, ty, tx + 2000, th);
+      ctx.fillRect(tx + tw, ty, 4000, th);
+    }
+    ctx.restore();
+  });
+
+  ctx.restore();
+}
+
+// 初始默认加载 hockey-page 示例
+loadImgFromSrc('screenshots/hockey-page.png', 'hockey-page.png');
 </script>
 </body>
 </html>
