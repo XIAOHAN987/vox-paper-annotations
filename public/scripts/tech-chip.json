@@ -1,0 +1,54 @@
+{
+  "image": "screenshots/tech-chip.svg",
+  "imageWidth": 1920,
+  "imageHeight": 1080,
+  "bgType": "grid",
+  "theme": "dark",
+  "callouts": [
+    {
+      "id": 1,
+      "at": 20,
+      "durationInFrames": 28,
+      "target": [850, 440],
+      "cardPos": [520, 220],
+      "tag": "COMPUTE DIE",
+      "title": "TENSOR CORE 01 (NPU)",
+      "colorTheme": "cyan",
+      "metrics": [
+        { "label": "FP16 COMPUTE", "value": "3.8 PFLOPS", "highlight": true },
+        { "label": "SRAM CACHE", "value": "64 MB ULTRA-FAST" },
+        { "label": "LATENCY", "value": "0.24 ms" }
+      ]
+    },
+    {
+      "id": 2,
+      "at": 90,
+      "durationInFrames": 28,
+      "target": [490, 540],
+      "cardPos": [180, 480],
+      "tag": "MEMORY BUS",
+      "title": "HBM3E STACK (32GB)",
+      "colorTheme": "amber",
+      "metrics": [
+        { "label": "BANDWIDTH", "value": "1.2 TB/s", "highlight": true },
+        { "label": "BUS WIDTH", "value": "4096-BIT" },
+        { "label": "PIN SPEED", "value": "9.6 Gbps" }
+      ]
+    },
+    {
+      "id": 3,
+      "at": 160,
+      "durationInFrames": 28,
+      "target": [1070, 660],
+      "cardPos": [1260, 600],
+      "tag": "VECTOR ENGINE",
+      "title": "VECTOR ENGINE B (DSP)",
+      "colorTheme": "emerald",
+      "metrics": [
+        { "label": "INT8 THROUGHPUT", "value": "7.6 TOPS", "highlight": true },
+        { "label": "EFFICIENCY", "value": "48 TOPS/W" },
+        { "label": "EXECUTION", "value": "SIMD 512-BIT" }
+      ]
+    }
+  ]
+}

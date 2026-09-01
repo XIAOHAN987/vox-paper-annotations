@@ -2,7 +2,7 @@
   "image": "screenshots/hockey-page.png",
   "imageWidth": 1652,
   "imageHeight": 1671,
-  "durationInFrames": 330,
+  "durationInFrames": 300,
   "grainOpacity": 0.25,
   "theme": "light",
   "bgType": "grid",
@@ -12,51 +12,42 @@
       "action": "circle",
       "at": 30,
       "target": {
-        "x": 684,
-        "y": 71,
-        "width": 762,
-        "height": 98
-      }
-    },
-    {
-      "action": "arrow",
-      "at": 90,
-      "target": {
-        "x": 138,
-        "y": 125,
-        "width": 256,
-        "height": 147
-      }
-    },
-    {
-      "action": "underline",
-      "at": 150,
-      "target": {
-        "x": 696,
-        "y": 523,
-        "width": 807,
-        "height": 84
-      }
-    },
-    {
-      "action": "wavy",
-      "at": 210,
-      "target": {
-        "x": 696,
-        "y": 625,
-        "width": 748,
-        "height": 87
+        "x": 699,
+        "y": 84,
+        "width": 742,
+        "height": 86
       }
     },
     {
       "action": "highlight",
-      "at": 270,
+      "at": 90,
       "target": {
-        "x": 69,
-        "y": 771,
-        "width": 553,
-        "height": 72
+        "x": 707,
+        "y": 524,
+        "width": 792,
+        "height": 105
+      }
+    },
+    {
+      "action": "arrow",
+      "at": 150,
+      "target": {
+        "x": 118,
+        "y": 84,
+        "width": 208,
+        "height": 153
       }
     }
-  ]
+  ],
+  "focus": {
+    "at": 210,
+    "until": 280,
+    "target": {
+      "x": 76,
+      "y": 768,
+      "width": 592,
+      "height": 131
+    },
+    "dimOpacity": 0.68
+  }
 }

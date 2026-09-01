@@ -6,6 +6,11 @@ import {
   VoxAnnotateScene,
   voxAnnotateSchema,
 } from "./compositions/VoxAnnotateScene";
+import {
+  calculateTechMetadata,
+  VoxTechCalloutScene,
+  voxTechSceneSchema,
+} from "./compositions/VoxTechCalloutScene";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -215,6 +220,27 @@ export const RemotionRoot: React.FC = () => {
           cameraKeys: [],
           scriptFile: "scripts/vox-script.json",
           cameraMode: "auto" as const,
+        }}
+      />
+
+      {/* 暗调科技引线拆解 (CAD Tech Callouts): 芯片/架构/硬件 HUD 机械折线与参数卡片 */}
+      <Composition
+        id="VoxTechCallout"
+        component={VoxTechCalloutScene}
+        calculateMetadata={calculateTechMetadata}
+        durationInFrames={300}
+        fps={30}
+        width={1920}
+        height={1080}
+        schema={voxTechSceneSchema}
+        defaultProps={{
+          image: "screenshots/tech-chip.svg",
+          imageWidth: 1920,
+          imageHeight: 1080,
+          scriptFile: "scripts/tech-chip.json",
+          bgType: "grid" as const,
+          theme: "dark" as const,
+          callouts: [],
         }}
       />
     </>

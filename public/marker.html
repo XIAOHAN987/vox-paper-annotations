@@ -3,16 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VOX 可视化标注与实时动效工作台</title>
+<title>视频动效生产超级工作台 (Super Workbench)</title>
 <style>
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 0; background: #0c0d12; color: #e2e8f0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    display: flex; height: 100vh; overflow: hidden;
+    margin: 0; padding: 0; background: #07090d; color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
   }
+  
+  /* 顶部全局模板总线导航 */
+  #top-bar {
+    height: 48px; background: #0c0f17; border-bottom: 1px solid #1e293b;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 50;
+  }
+  .brand-title {
+    font-size: 14px; font-weight: 800; color: #f8fafc; display: flex; align-items: center; gap: 8px;
+    letter-spacing: 0.5px;
+  }
+  .brand-badge {
+    font-size: 10px; background: #0284c7; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700;
+  }
+  .template-tabs {
+    display: flex; gap: 4px; background: #07090d; padding: 3px; border-radius: 6px; border: 1px solid #1e293b;
+  }
+  .tab-btn {
+    background: transparent; border: none; color: #94a3b8; padding: 5px 12px; font-size: 12px;
+    font-weight: 600; border-radius: 4px; cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn:hover:not(.disabled) { color: #f8fafc; background: rgba(255,255,255,0.05); }
+  .tab-btn.active { background: #0284c7; color: #fff; }
+  .tab-btn.disabled { opacity: 0.4; cursor: not-allowed; font-size: 11px; }
+
+  /* 主工作区 */
+  #main-layout { display: flex; flex: 1; height: calc(100vh - 48px); overflow: hidden; }
+
   #stage {
-    flex: 1; height: 100vh; overflow-y: auto; overflow-x: auto; position: relative;
+    flex: 1; height: 100%; overflow-y: auto; overflow-x: auto; position: relative;
     background: #090a0f; padding: 40px 20px; text-align: center;
     border-right: 1px solid #1e293b; user-select: none;
   }
@@ -21,6 +48,8 @@
     margin: 0 auto; text-align: left;
   }
   #canvas-wrap img { display: block; max-width: none; pointer-events: none; }
+  
+  /* 标注图形 */
   .box {
     position: absolute; border: 2px dashed #38bdf8; background: rgba(56, 189, 248, 0.15);
     pointer-events: none; z-index: 10;
@@ -34,75 +63,81 @@
   .box.box-tool { border-color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
   .box.focus { border-color: #c084fc; background: rgba(192, 132, 252, 0.2); }
 
+  /* CAD 引线标注元素 */
+  .tech-pin {
+    position: absolute; width: 14px; height: 14px; border-radius: 50%;
+    transform: translate(-50%, -50%); border: 2px solid #38bdf8; background: #0c4a6e;
+    box-shadow: 0 0 10px #38bdf8; z-index: 15; pointer-events: none;
+  }
+  .tech-card-marker {
+    position: absolute; width: 220px; background: rgba(15, 23, 42, 0.9);
+    border: 1px solid #38bdf8; border-radius: 4px; padding: 6px 10px; font-size: 11px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.8); z-index: 15; pointer-events: none;
+  }
+
   .badge {
     position: absolute; top: -18px; left: 0; font-size: 11px;
     background: #0284c7; color: #fff; padding: 1px 6px; border-radius: 3px; font-weight: bold;
     white-space: nowrap; pointer-events: none;
   }
+  
   #panel {
-    width: 360px; height: 100vh; background: #11141c; display: flex; flex-direction: column;
+    width: 380px; height: 100%; background: #11141c; display: flex; flex-direction: column;
     border-left: 1px solid #1e293b; z-index: 20;
   }
-  header { padding: 16px; border-bottom: 1px solid #1e293b; }
-  h1 { font-size: 15px; margin: 0 0 12px 0; font-weight: 600; color: #f8fafc; }
+  header { padding: 14px 16px; border-bottom: 1px solid #1e293b; }
   .btn-primary {
     background: #2563eb; color: #fff; border: none; padding: 7px 12px; border-radius: 5px;
     font-size: 12px; cursor: pointer; font-weight: 500; transition: background 0.15s;
   }
   .btn-primary:hover { background: #1d4ed8; }
   .btn-upload {
-    width: 100%; padding: 9px 12px; background: #0f766e; color: #fff; border: 1px dashed #2dd4bf;
+    width: 100%; padding: 8px 12px; background: #0f766e; color: #fff; border: 1px dashed #2dd4bf;
     border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center;
-    margin-bottom: 10px; transition: all 0.2s;
+    margin-bottom: 8px; transition: all 0.2s;
   }
   .btn-upload:hover { background: #115e59; border-color: #5eead4; }
 
   #type-row {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-    padding: 12px 16px; border-bottom: 1px solid #1e293b; background: #0b0e14;
+    padding: 10px 16px; border-bottom: 1px solid #1e293b; background: #0b0e14;
   }
   #type-row button {
-    background: #1e293b; border: 1px solid #334155; color: #cbd5e1;
-    padding: 7px 0; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all .15s;
+    padding: 6px 0; background: #1e293b; color: #cbd5e1; border: 1px solid #334155;
+    border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.15s;
   }
-  #type-row button:hover { background: #334155; }
-  #type-row button.active { background: #38bdf8; color: #0f172a; font-weight: 700; border-color: #38bdf8; }
-
-  #list { flex: 1; overflow-y: auto; padding: 12px 16px; }
-  .ann {
-    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
-    background: #1e293b; border: 1px solid #334155; border-radius: 6px;
-    margin-bottom: 8px; font-size: 12px;
-  }
-  .ann .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .ann .info { flex: 1; color: #94a3b8; line-height: 1.3; font-size: 11px; }
-  .ann .info b { color: #f1f5f9; font-size: 12px; }
-  .ann input {
-    width: 54px; background: #0f172a; border: 1px solid #475569;
-    color: #38bdf8; text-align: center; border-radius: 4px; padding: 3px; font-weight: 600;
-  }
-  .ann .del {
-    background: #dc2626; color: #fff; border: none; width: 20px; height: 20px;
-    border-radius: 4px; cursor: pointer; font-size: 11px; line-height: 1;
+  #type-row button.active {
+    background: #0284c7; color: #fff; border-color: #38bdf8;
   }
 
-  #actions { padding: 14px 16px; border-top: 1px solid #1e293b; display: flex; flex-direction: column; gap: 8px; }
+  #list { flex: 1; overflow-y: auto; padding: 10px 14px; }
+  .ann-item {
+    background: #181d28; border: 1px solid #283347; border-radius: 6px;
+    padding: 8px 10px; margin-bottom: 8px; font-size: 12px;
+  }
+  .ann-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .ann-type { font-weight: 700; color: #38bdf8; }
+  .ann-del { background: transparent; border: none; color: #ef4444; cursor: pointer; font-weight: bold; font-size: 12px; }
+  .ann-del:hover { color: #f87171; }
+  
+  #actions { padding: 12px 14px; border-top: 1px solid #1e293b; display: flex; flex-direction: column; gap: 8px; background: #0c0f17; }
   .row { display: flex; gap: 8px; }
   .row button {
-    flex: 1; padding: 9px; border: none; border-radius: 5px; font-size: 12px;
+    flex: 1; padding: 8px; border: none; border-radius: 5px; font-size: 12px;
     font-weight: 600; cursor: pointer; transition: opacity .15s;
   }
   .row button:hover { opacity: 0.9; }
-  #btn-preview { background: #0284c7; color: #fff; font-size: 13px; }
-  #btn-save { background: #7c3aed; color: #fff; }
-  #btn-copy { background: #16a34a; color: #fff; }
+  #btn-save-project { background: #16a34a; color: #fff; font-size: 13px; font-weight: 700; }
+  #btn-preview { background: #0284c7; color: #fff; }
+  #btn-copy { background: #334155; color: #f1f5f9; border: 1px solid #475569 !important; }
   #btn-download { background: #334155; color: #f1f5f9; border: 1px solid #475569 !important; }
+  
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: #10b981; color: #fff; padding: 9px 20px; border-radius: 6px;
     font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 100; font-weight: 500;
   }
-  #hint { padding: 10px 16px; font-size: 11px; color: #64748b; border-top: 1px solid #1e293b; line-height: 1.4; }
+  #hint { padding: 8px 14px; font-size: 11px; color: #64748b; border-top: 1px solid #1e293b; line-height: 1.4; }
 
   /* 实时动效播放器 Modal */
   #modal-preview {
@@ -125,80 +160,108 @@
 </style>
 </head>
 <body>
-  <div id="stage">
-    <div id="canvas-wrap">
-      <div id="drop-hint" style="padding: 40px; text-align: center; color: #64748b;">
-        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #94a3b8;">拖拽图片到此，或在右侧点击上传</div>
-        <div style="font-size: 12px;">支持 PNG / JPG / WebP 高清截图与论文 PDF 转图</div>
-      </div>
+
+  <!-- 1. 顶部模板切换总线 -->
+  <div id="top-bar">
+    <div class="brand-title">
+      <span>动效生产超级工作台</span>
+      <span class="brand-badge">PRO V2.0</span>
     </div>
+
+    <div class="template-tabs">
+      <button class="tab-btn active" data-tab="vox">1. VOX 纸张标注</button>
+      <button class="tab-btn" data-tab="tech">2. CAD 科技引线</button>
+      <button class="tab-btn disabled" title="正在开发中">3. 决策标尺 (SOON)</button>
+      <button class="tab-btn disabled" title="正在开发中">4. 全屏文字击打 (SOON)</button>
+    </div>
+
+    <div style="font-size:11px;color:#64748b;">Remotion 60FPS 内核</div>
   </div>
 
-  <div id="panel">
-    <header>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <h1 style="margin:0;">VOX 标注动效工作台</h1>
-        <span style="font-size:11px;color:#38bdf8;background:#0c4a6e;padding:2px 6px;border-radius:4px;">Web 极速版</span>
-      </div>
-
-      <input type="file" id="file-input" accept="image/*" style="display:none;">
-      <button class="btn-upload" id="btn-upload-file">上传本地图片 (或拖入左侧)</button>
-
-      <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input id="img-path" list="known-images" placeholder="或输入路径/URL" style="flex:1;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:5px 8px;border-radius:4px;font-size:12px;">
-        <datalist id="known-images">
-          <option value="screenshots/hockey-page.png"></option>
-          <option value="textures/newspaper.jpg"></option>
-        </datalist>
-        <button class="btn-primary" id="btn-load">加载</button>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span style="font-size:11px;color:#94a3b8;">底色模式:</span>
-        <select id="theme-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;">
-          <option value="light">浅色纸张 / 白底报纸 (Light)</option>
-          <option value="dark" selected>暗黑模式 / 纯黑推特 (Dark)</option>
-        </select>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:11px;color:#94a3b8;">背景质感:</span>
-        <select id="bg-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;cursor:pointer;">
-          <option value="grid" selected>科技工业微网格 (Dark Tech Grid)</option>
-          <option value="blueprint">深蓝工程蓝图 (Blueprint)</option>
-          <option value="noise">胶片杂色噪点 (Film Grain Noise)</option>
-          <option value="paper">复古报纸底纹 (Vintage Paper)</option>
-          <option value="vignette">电影暗角微光 (Radial Glow)</option>
-          <option value="pure">极简纯黑 (Pure Minimal)</option>
-        </select>
-      </div>
-    </header>
-
-    <div id="type-row">
-      <button data-t="circle" class="active">圆圈</button>
-      <button data-t="highlight">高亮</button>
-      <button data-t="underline">下划线</button>
-      <button data-t="wavy">波浪线</button>
-      <button data-t="arrow">箭头</button>
-      <button data-t="cross">打叉</button>
-      <button data-t="box-tool">方框</button>
-      <button data-t="focus">聚焦</button>
-    </div>
-
-    <div id="list"></div>
-
-    <div id="actions">
-      <div class="row">
-        <button id="btn-save-project" style="background:#16a34a;color:#fff;font-size:13px;font-weight:700;">保存到项目 (直接生效)</button>
-        <button id="btn-preview" style="background:#0284c7;color:#fff;">▶ 实时预览 (60fps)</button>
-      </div>
-      <div class="row">
-        <button id="btn-copy">复制 JSON 数据</button>
-        <button id="btn-download">下载 .json 文件</button>
+  <!-- 2. 主工作区 -->
+  <div id="main-layout">
+    <div id="stage">
+      <div id="canvas-wrap">
+        <div id="drop-hint" style="padding: 40px; text-align: center; color: #64748b;">
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #94a3b8;">拖拽图片到此，或在右侧点击上传</div>
+          <div style="font-size: 12px;">支持 PNG / JPG / WebP / SVG 高清截图与架构图</div>
+        </div>
       </div>
     </div>
 
-    <div id="hint">在图上拖框即标注 · 点击「在线实时动效预览」可直接在网页模拟相机运镜与手绘生长</div>
+    <div id="panel">
+      <header>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <h1 id="panel-title" style="margin:0;font-size:14px;color:#f8fafc;">VOX 纸张手绘标注</h1>
+          <span id="panel-mode-badge" style="font-size:10px;color:#38bdf8;background:#0c4a6e;padding:2px 6px;border-radius:4px;">手绘纸张模式</span>
+        </div>
+
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+        <button class="btn-upload" id="btn-upload-file">上传本地图片 (或拖入左侧)</button>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input id="img-path" list="known-images" placeholder="或输入路径/URL" style="flex:1;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:5px 8px;border-radius:4px;font-size:12px;">
+          <datalist id="known-images">
+            <option value="screenshots/tech-chip.svg"></option>
+            <option value="screenshots/hockey-page.png"></option>
+            <option value="textures/newspaper.jpg"></option>
+          </datalist>
+          <button class="btn-primary" id="btn-load">加载</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:11px;color:#94a3b8;">底色模式:</span>
+          <select id="theme-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;">
+            <option value="light">浅色纸张 / 白底报纸 (Light)</option>
+            <option value="dark" selected>暗黑模式 / 纯黑推特 (Dark)</option>
+          </select>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:#94a3b8;">背景质感:</span>
+          <select id="bg-select" style="flex:1;background:#0f172a;color:#f8fafc;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;outline:none;cursor:pointer;">
+            <option value="grid" selected>科技工业微网格 (Dark Tech Grid)</option>
+            <option value="blueprint">深蓝工程蓝图 (Blueprint)</option>
+            <option value="noise">胶片杂色噪点 (Film Grain Noise)</option>
+            <option value="paper">复古报纸底纹 (Vintage Paper)</option>
+            <option value="vignette">电影暗角微光 (Radial Glow)</option>
+            <option value="pure">极简纯黑 (Pure Minimal)</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- 纸张工具选择行 -->
+      <div id="type-row">
+        <button data-t="circle" class="active">圆圈</button>
+        <button data-t="highlight">高亮</button>
+        <button data-t="underline">下划线</button>
+        <button data-t="wavy">波浪线</button>
+        <button data-t="arrow">箭头</button>
+        <button data-t="cross">打叉</button>
+        <button data-t="box-tool">方框</button>
+        <button data-t="focus">聚焦</button>
+      </div>
+
+      <!-- 科技引线工具提示 -->
+      <div id="tech-tools-row" style="display:none;padding:10px 16px;background:#0b0e14;border-bottom:1px solid #1e293b;">
+        <button id="btn-add-callout" style="width:100%;padding:7px;background:#0284c7;color:#fff;border:none;border-radius:4px;font-weight:700;font-size:12px;cursor:pointer;">+ 新增 CAD 科技引线锚点</button>
+      </div>
+
+      <div id="list"></div>
+
+      <div id="actions">
+        <div class="row">
+          <button id="btn-save-project">保存到项目 (直接生效)</button>
+          <button id="btn-preview">▶ 实时预览 (60fps)</button>
+        </div>
+        <div class="row">
+          <button id="btn-copy">复制 JSON 数据</button>
+          <button id="btn-download">下载 .json 文件</button>
+        </div>
+      </div>
+
+      <div id="hint">在图上拖框即标注 · 点击「实时预览」可在网页模拟相机运镜与手绘生长</div>
+    </div>
   </div>
 
   <!-- 实时动效播放器 Modal -->
@@ -225,7 +288,8 @@
   <div id="toast">已复制</div>
 
 <script>
-let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'dark', curBgType = 'grid', anns = [], drawing = null, idSeq = 1;
+let currentTab = 'vox'; // 'vox' | 'tech'
+let imgW = 0, imgH = 0, viewScale = 1, curType = 'circle', curTheme = 'dark', curBgType = 'grid', anns = [], techCallouts = [], drawing = null, idSeq = 1;
 let currentImgElement = null;
 let uploadedDataUrl = '';
 let uploadedFileName = 'custom-image.png';
@@ -241,6 +305,57 @@ const DARK_COLORS = {
 };
 let COLORS = DARK_COLORS;
 
+// 模板切换
+document.querySelectorAll('.tab-btn:not(.disabled)').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    
+    if (currentTab === 'vox') {
+      document.getElementById('panel-title').textContent = 'VOX 纸张手绘标注';
+      document.getElementById('panel-mode-badge').textContent = '手绘纸张模式';
+      document.getElementById('type-row').style.display = 'grid';
+      document.getElementById('tech-tools-row').style.display = 'none';
+      if (!uploadedDataUrl) loadImgFromSrc('screenshots/hockey-page.png');
+      renderBoxes();
+      renderList();
+    } else if (currentTab === 'tech') {
+      document.getElementById('panel-title').textContent = 'CAD 暗调科技引线';
+      document.getElementById('panel-mode-badge').textContent = 'CAD HUD 拆解模式';
+      document.getElementById('type-row').style.display = 'none';
+      document.getElementById('tech-tools-row').style.display = 'block';
+      if (!uploadedDataUrl) loadImgFromSrc('screenshots/tech-chip.svg');
+      loadDefaultTechCallouts();
+      renderTechCallouts();
+    }
+  };
+});
+
+function loadDefaultTechCallouts() {
+  if (techCallouts.length === 0) {
+    techCallouts = [
+      {
+        id: 1, at: 20, target: [850, 440], cardPos: [520, 220],
+        tag: 'COMPUTE DIE', title: 'TENSOR CORE 01 (NPU)', colorTheme: 'cyan',
+        metrics: [
+          { label: 'FP16 COMPUTE', value: '3.8 PFLOPS' },
+          { label: 'SRAM CACHE', value: '64 MB' },
+          { label: 'LATENCY', value: '0.24 ms' }
+        ]
+      },
+      {
+        id: 2, at: 90, target: [490, 540], cardPos: [180, 480],
+        tag: 'MEMORY BUS', title: 'HBM3E STACK (32GB)', colorTheme: 'amber',
+        metrics: [
+          { label: 'BANDWIDTH', value: '1.2 TB/s' },
+          { label: 'BUS WIDTH', value: '4096-BIT' }
+        ]
+      }
+    ];
+  }
+}
+
 // 主题切换
 document.getElementById('theme-select').onchange = (e) => {
   curTheme = e.target.value;
@@ -253,35 +368,29 @@ document.getElementById('theme-select').onchange = (e) => {
 document.getElementById('bg-select').onchange = (e) => {
   curBgType = e.target.value;
   updateStageBackground();
+  toast(`背景质感已切换为: ${e.target.options[e.target.selectedIndex].text}`);
 };
 
 function updateStageBackground() {
   const stage = document.getElementById('stage');
   if (curBgType === 'grid') {
-    stage.style.background = 'radial-gradient(circle at 50% 45%, #181d2a 0%, #090a0f 100%)';
-    stage.style.backgroundImage = 'radial-gradient(circle at 50% 45%, rgba(30, 41, 59, 0.5) 0%, rgba(9, 10, 15, 0.95) 100%), linear-gradient(to right, rgba(51, 65, 85, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(51, 65, 85, 0.22) 1px, transparent 1px)';
+    stage.style.background = 'radial-gradient(circle at 50% 50%, rgba(20, 26, 41, 0.7) 0%, rgba(7, 9, 13, 0.98) 100%), linear-gradient(to right, rgba(51, 65, 85, 0.28) 1px, transparent 1px), linear-gradient(to bottom, rgba(51, 65, 85, 0.28) 1px, transparent 1px)';
     stage.style.backgroundSize = '100% 100%, 48px 48px, 48px 48px';
   } else if (curBgType === 'blueprint') {
-    stage.style.background = '#081b33';
-    stage.style.backgroundImage = 'linear-gradient(to right, rgba(56, 189, 248, 0.16) 1px, transparent 1px), linear-gradient(to bottom, rgba(56, 189, 248, 0.16) 1px, transparent 1px)';
-    stage.style.backgroundSize = '32px 32px';
-  } else if (curBgType === 'noise') {
-    stage.style.background = '#0c0d12';
-    stage.style.backgroundImage = 'none';
-  } else if (curBgType === 'paper') {
-    stage.style.background = '#f2ece1';
-    stage.style.backgroundImage = 'none';
+    stage.style.background = 'radial-gradient(circle at 50% 50%, rgba(8, 27, 51, 0.9) 0%, rgba(3, 10, 20, 0.98) 100%), linear-gradient(to right, rgba(56, 189, 248, 0.18) 1px, transparent 1px), linear-gradient(to bottom, rgba(56, 189, 248, 0.18) 1px, transparent 1px)';
+    stage.style.backgroundSize = '100% 100%, 32px 32px, 32px 32px';
   } else if (curBgType === 'vignette') {
     stage.style.background = 'radial-gradient(circle at 50% 50%, #1e2536 0%, #06070a 100%)';
-    stage.style.backgroundImage = 'none';
+  } else if (curBgType === 'paper') {
+    stage.style.background = '#f2ece1';
+  } else if (curBgType === 'noise') {
+    stage.style.background = '#0d0f14';
   } else {
-    stage.style.background = '#0a0b0e';
-    stage.style.backgroundImage = 'none';
+    stage.style.background = '#07090d';
   }
 }
 updateStageBackground();
 
-// 按钮类型切换
 const typeBtns = document.querySelectorAll('#type-row button');
 typeBtns.forEach(btn => {
   btn.onclick = () => {
@@ -306,17 +415,18 @@ function loadImgFromSrc(src, fileName = 'custom-image.png') {
     wrap.innerHTML = '';
     wrap.appendChild(img);
     const fit = () => {
-      viewScale = Math.min(1, (document.getElementById('stage').clientWidth - 40) / imgW);
+      const stageW = document.getElementById('stage').clientWidth - 60;
+      viewScale = Math.min(1, stageW / imgW);
+      if (viewScale <= 0.1) viewScale = 1;
       img.style.width = (imgW * viewScale) + 'px';
-      renderBoxes();
+      img.style.height = (imgH * viewScale) + 'px';
+      if (currentTab === 'vox') renderBoxes();
+      else renderTechCallouts();
     };
     fit();
     window.onresize = fit;
-    anns = [];
-    renderList();
-    toast(`已成功载入图片: ${imgW}×${imgH}`);
+    toast(`已载入图片: ${imgW}×${imgH}`);
   };
-  img.onerror = () => toast('图片加载失败，请检查网络或格式');
   img.src = src;
 }
 
@@ -326,147 +436,254 @@ document.getElementById('btn-upload-file').onclick = () => fileInput.click();
 fileInput.onchange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  uploadedFileName = file.name;
   const reader = new FileReader();
   reader.onload = (evt) => {
     uploadedDataUrl = evt.target.result;
+    uploadedFileName = file.name;
     loadImgFromSrc(uploadedDataUrl, file.name);
   };
   reader.readAsDataURL(file);
 };
 
 // 拖拽上传
-const stage = document.getElementById('stage');
-stage.addEventListener('dragover', (e) => { e.preventDefault(); stage.style.background = '#1e293b'; });
-stage.addEventListener('dragleave', () => { stage.style.background = '#090a0f'; });
-stage.addEventListener('drop', (e) => {
-  e.preventDefault(); stage.style.background = '#090a0f';
+const stageEl = document.getElementById('stage');
+stageEl.ondragover = (e) => { e.preventDefault(); stageEl.style.background = '#0f172a'; };
+stageEl.ondragleave = () => updateStageBackground();
+stageEl.ondrop = (e) => {
+  e.preventDefault(); updateStageBackground();
   const file = e.dataTransfer.files[0];
   if (file && file.type.startsWith('image/')) {
-    uploadedFileName = file.name;
     const reader = new FileReader();
     reader.onload = (evt) => {
       uploadedDataUrl = evt.target.result;
+      uploadedFileName = file.name;
       loadImgFromSrc(uploadedDataUrl, file.name);
     };
     reader.readAsDataURL(file);
   }
-});
+};
 
-// 手动路径/URL加载
 document.getElementById('btn-load').onclick = () => {
   const p = document.getElementById('img-path').value.trim();
-  if (!p) return toast('请输入路径或 URL');
-  uploadedFileName = p.split('/').pop() || 'image.png';
-  uploadedDataUrl = p;
-  loadImgFromSrc(p, uploadedFileName);
+  if (p) loadImgFromSrc(p);
 };
 
-// 坐标转换与拖拽框选
-const toImg = (e) => {
-  const r = wrap.getBoundingClientRect();
-  return [(e.clientX - r.left) / viewScale, (e.clientY - r.top) / viewScale];
-};
-
-wrap.addEventListener('mousedown', e => {
+// -------------------------------------------------------------
+// VOX 纸张标注交互
+// -------------------------------------------------------------
+wrap.onmousedown = (e) => {
+  if (e.target !== wrap && e.target !== wrap.querySelector('img')) return;
   if (!imgW) return;
-  const [x, y] = toImg(e);
-  drawing = { x0: x, y0: y, el: document.createElement('div') };
-  drawing.el.className = 'box ' + curType;
-  wrap.appendChild(drawing.el);
-});
+  
+  if (currentTab === 'tech') {
+    // 科技引线模式：点击添加新引线
+    const r = wrap.getBoundingClientRect();
+    const clickX = Math.round((e.clientX - r.left) / viewScale);
+    const clickY = Math.round((e.clientY - r.top) / viewScale);
+    
+    const newCallout = {
+      id: ++idSeq,
+      at: techCallouts.length ? Math.max(...techCallouts.map(c => c.at)) + 45 : 20,
+      target: [clickX, clickY],
+      cardPos: [Math.max(20, clickX - 120), Math.max(20, clickY - 140)],
+      tag: 'HARDWARE',
+      title: 'MODULE_' + idSeq,
+      colorTheme: 'cyan',
+      metrics: [
+        { label: 'STATUS', value: 'ACTIVE' },
+        { label: 'CLOCK', value: '2.4 GHz' }
+      ]
+    };
+    techCallouts.push(newCallout);
+    renderTechCallouts();
+    toast('已添加 CAD 科技引线锚点');
+    return;
+  }
 
-window.addEventListener('mousemove', e => {
-  if (!drawing) return;
-  const [x, y] = toImg(e);
-  const rx = Math.min(drawing.x0, x), ry = Math.min(drawing.y0, y);
-  const rw = Math.abs(x - drawing.x0), rh = Math.abs(y - drawing.y0);
-  Object.assign(drawing.el.style, {
-    left: (rx * viewScale) + 'px', top: (ry * viewScale) + 'px',
-    width: (rw * viewScale) + 'px', height: (rh * viewScale) + 'px'
-  });
-});
+  // 纸张标注模式：拉框
+  const r = wrap.getBoundingClientRect();
+  const startX = (e.clientX - r.left) / viewScale;
+  const startY = (e.clientY - r.top) / viewScale;
+  drawing = { startX, startY };
 
-window.addEventListener('mouseup', e => {
-  if (!drawing) return;
-  const [x, y] = toImg(e);
-  const rx = Math.round(Math.min(drawing.x0, x)), ry = Math.round(Math.min(drawing.y0, y));
-  const rw = Math.round(Math.abs(x - drawing.x0)), rh = Math.round(Math.abs(y - drawing.y0));
-  drawing.el.remove();
-  drawing = null;
-  if (rw < 10 || rh < 10) return;
-  const actionName = curType === 'box-tool' ? 'box' : curType;
-  anns.push({
-    id: idSeq++,
-    action: actionName,
-    at: (anns.length ? Math.max(...anns.map(a => a.at)) + 60 : 30),
-    target: { x: rx, y: ry, width: rw, height: rh }
-  });
-  renderBoxes(); renderList();
-});
+  const tmp = document.createElement('div');
+  tmp.className = `box ${curType}`;
+  tmp.id = 'tmp-box';
+  wrap.appendChild(tmp);
+
+  window.onmousemove = (ev) => {
+    if (!drawing) return;
+    const curX = (ev.clientX - r.left) / viewScale;
+    const curY = (ev.clientY - r.top) / viewScale;
+    const x = Math.min(drawing.startX, curX);
+    const y = Math.min(drawing.startY, curY);
+    const w = Math.abs(curX - drawing.startX);
+    const h = Math.abs(curY - drawing.startY);
+
+    tmp.style.left = (x * viewScale) + 'px';
+    tmp.style.top = (y * viewScale) + 'px';
+    tmp.style.width = (w * viewScale) + 'px';
+    tmp.style.height = (h * viewScale) + 'px';
+  };
+
+  window.onmouseup = (ev) => {
+    if (!drawing) return;
+    const curX = (ev.clientX - r.left) / viewScale;
+    const curY = (ev.clientY - r.top) / viewScale;
+    const x = Math.round(Math.min(drawing.startX, curX));
+    const y = Math.round(Math.min(drawing.startY, curY));
+    const w = Math.round(Math.abs(curX - drawing.startX));
+    const h = Math.round(Math.abs(curY - drawing.startY));
+
+    tmp.remove();
+    drawing = null;
+    window.onmousemove = null;
+    window.onmouseup = null;
+
+    if (w < 10 || h < 10) return;
+
+    const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
+    const nextAt = anns.length ? maxAt + 45 : 25;
+
+    anns.push({
+      id: idSeq++,
+      action: curType === 'box-tool' ? 'box' : curType,
+      at: nextAt,
+      target: { x, y, width: w, height: h }
+    });
+
+    renderBoxes();
+    renderList();
+  };
+};
 
 function renderBoxes() {
-  document.querySelectorAll('#canvas-wrap .box').forEach(b => b.remove());
-  anns.forEach(a => {
-    const d = document.createElement('div');
-    const className = a.action === 'box' ? 'box-tool' : a.action;
-    d.className = 'box ' + className;
-    d.style.left = (a.target.x * viewScale) + 'px';
-    d.style.top = (a.target.y * viewScale) + 'px';
-    d.style.width = (a.target.width * viewScale) + 'px';
-    d.style.height = (a.target.height * viewScale) + 'px';
-    d.innerHTML = `<span class="badge">#${a.id} @${a.at}f</span>`;
-    wrap.appendChild(d);
+  wrap.querySelectorAll('.box, .badge, .tech-pin, .tech-card-marker').forEach(el => el.remove());
+  anns.forEach((a, i) => {
+    const el = document.createElement('div');
+    const typeClass = a.action === 'box' ? 'box-tool' : a.action;
+    el.className = `box ${typeClass}`;
+    el.style.left = (a.target.x * viewScale) + 'px';
+    el.style.top = (a.target.y * viewScale) + 'px';
+    el.style.width = (a.target.width * viewScale) + 'px';
+    el.style.height = (a.target.height * viewScale) + 'px';
+
+    const b = document.createElement('div');
+    b.className = 'badge';
+    b.textContent = `#${i + 1} ${a.action} @${a.at}f`;
+    el.appendChild(b);
+    wrap.appendChild(el);
   });
+}
+
+function renderTechCallouts() {
+  wrap.querySelectorAll('.box, .badge, .tech-pin, .tech-card-marker').forEach(el => el.remove());
+  techCallouts.forEach((c, i) => {
+    // 瞄准点
+    const pin = document.createElement('div');
+    pin.className = 'tech-pin';
+    pin.style.left = (c.target[0] * viewScale) + 'px';
+    pin.style.top = (c.target[1] * viewScale) + 'px';
+    wrap.appendChild(pin);
+
+    // 参数卡片标记
+    const card = document.createElement('div');
+    card.className = 'tech-card-marker';
+    card.style.left = (c.cardPos[0] * viewScale) + 'px';
+    card.style.top = (c.cardPos[1] * viewScale) + 'px';
+    card.innerHTML = `<span style="color:#38bdf8;font-weight:700;">[${c.tag}]</span> ${c.title}`;
+    wrap.appendChild(card);
+  });
+  renderTechList();
 }
 
 function renderList() {
+  if (currentTab === 'tech') return renderTechList();
   const list = document.getElementById('list');
   list.innerHTML = '';
-  const NAMES = {
-    circle: '圆圈', highlight: '高亮', underline: '下划线', wavy: '波浪线',
-    arrow: '箭头', cross: '打叉', box: '方框', focus: '聚焦'
-  };
-  anns.forEach(a => {
-    const row = document.createElement('div');
-    row.className = 'ann';
-    const colorKey = a.action === 'box' ? 'box-tool' : a.action;
-    row.innerHTML = `<span class="dot" style="background:${COLORS[colorKey]}"></span>
-      <div class="info"><b>#${a.id} ${NAMES[a.action]}</b><br>(${a.target.x}, ${a.target.y}) ${a.target.width}×${a.target.height}</div>`;
-    const inp = document.createElement('input');
-    inp.type = 'number'; inp.value = a.at; inp.title = '触发帧';
-    inp.onchange = () => { a.at = parseInt(inp.value) || 0; renderBoxes(); renderList(); };
-    const del = document.createElement('button');
-    del.className = 'del'; del.textContent = 'x';
-    del.onclick = () => { anns = anns.filter(x => x.id !== a.id); renderBoxes(); renderList(); };
-    row.appendChild(inp); row.appendChild(del);
-    list.appendChild(row);
+  anns.forEach((a, i) => {
+    const it = document.createElement('div');
+    it.className = 'ann-item';
+    it.innerHTML = `
+      <div class="ann-item-head">
+        <span class="ann-type">#${i + 1} [${a.action}]</span>
+        <button class="ann-del" onclick="delAnn(${a.id})">✕ 删除</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="color:#94a3b8;font-size:11px;">触发帧:</span>
+        <input type="number" value="${a.at}" style="width:60px;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:2px 4px;border-radius:3px;" onchange="updateAt(${a.id}, this.value)">
+        <span style="color:#64748b;font-size:11px;">(${a.target.width}×${a.target.height})</span>
+      </div>
+    `;
+    list.appendChild(it);
   });
-
-  const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
-  const estFrames = Math.max(300, maxAt + 60);
-  const estSec = (estFrames / 30).toFixed(1);
-  const hintEl = document.getElementById('hint');
-  if (hintEl) {
-    hintEl.innerHTML = `当前共 <b>${anns.length}</b> 处标注 | 预计总时长: <b>${estSec}s</b> (${estFrames} 帧) · 包含自适应呼吸缓冲`;
-  }
 }
 
+function renderTechList() {
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  techCallouts.forEach((c, i) => {
+    const it = document.createElement('div');
+    it.className = 'ann-item';
+    it.innerHTML = `
+      <div class="ann-item-head">
+        <span class="ann-type" style="color:#38bdf8;">#${i + 1} [${c.tag}]</span>
+        <button class="ann-del" onclick="delTechCallout(${c.id})">✕ 删除</button>
+      </div>
+      <div style="margin-bottom:4px;">
+        <input type="text" value="${c.title}" placeholder="标题" style="width:100%;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:3px 6px;border-radius:3px;font-size:11px;" onchange="updateTechTitle(${c.id}, this.value)">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="color:#94a3b8;font-size:11px;">触发帧:</span>
+        <input type="number" value="${c.at}" style="width:55px;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:2px 4px;border-radius:3px;" onchange="updateTechAt(${c.id}, this.value)">
+        <span style="color:#94a3b8;font-size:11px;">主题:</span>
+        <select style="background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:2px 4px;border-radius:3px;font-size:11px;" onchange="updateTechTheme(${c.id}, this.value)">
+          <option value="cyan" ${c.colorTheme === 'cyan' ? 'selected' : ''}>赛博青</option>
+          <option value="amber" ${c.colorTheme === 'amber' ? 'selected' : ''}>工业橙</option>
+          <option value="emerald" ${c.colorTheme === 'emerald' ? 'selected' : ''}>极客绿</option>
+          <option value="rose" ${c.colorTheme === 'rose' ? 'selected' : ''}>高能红</option>
+        </select>
+      </div>
+    `;
+    list.appendChild(it);
+  });
+}
+
+window.delAnn = (id) => { anns = anns.filter(a => a.id !== id); renderBoxes(); renderList(); };
+window.updateAt = (id, val) => { const a = anns.find(x => x.id === id); if (a) a.at = parseInt(val) || 0; renderBoxes(); renderList(); };
+window.delTechCallout = (id) => { techCallouts = techCallouts.filter(c => c.id !== id); renderTechCallouts(); };
+window.updateTechAt = (id, val) => { const c = techCallouts.find(x => x.id === id); if (c) c.at = parseInt(val) || 0; renderTechCallouts(); };
+window.updateTechTitle = (id, val) => { const c = techCallouts.find(x => x.id === id); if (c) c.title = val; renderTechCallouts(); };
+window.updateTechTheme = (id, val) => { const c = techCallouts.find(x => x.id === id); if (c) c.colorTheme = val; renderTechCallouts(); };
+
+document.getElementById('btn-add-callout').onclick = () => {
+  toast('请在左侧图片上点击任意位置，放置引线锚点！');
+};
+
 function buildJSON() {
+  if (currentTab === 'tech') {
+    return {
+      image: uploadedDataUrl || (document.getElementById('img-path').value.trim() || 'screenshots/tech-chip.svg'),
+      imageWidth: imgW,
+      imageHeight: imgH,
+      bgType: curBgType,
+      theme: curTheme,
+      callouts: techCallouts.map(({ at, target, cardPos, tag, title, metrics, colorTheme }) => ({
+        at, target, cardPos, tag, title, metrics, colorTheme
+      }))
+    };
+  }
+
   const normal = anns.filter(a => a.action !== 'focus');
   const focus = anns.find(a => a.action === 'focus');
-  const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
-  const totalFrames = Math.max(300, maxAt + 60);
-
   return {
-    image: uploadedDataUrl || "screenshots/hockey-page.png",
-    imageWidth: imgW || 1920,
-    imageHeight: imgH || 1080,
-    durationInFrames: totalFrames,
-    grainOpacity: curTheme === 'dark' ? 0.12 : 0.25,
+    image: uploadedDataUrl || (document.getElementById('img-path').value.trim() || 'screenshots/hockey-page.png'),
+    imageWidth: imgW,
+    imageHeight: imgH,
+    grainOpacity: 0.25,
+    cameraMode: 'auto',
     theme: curTheme,
     bgType: curBgType,
-    cameraMode: "auto",
     annotations: normal.map(({ action, at, target }) => ({ action, at, target })),
     focus: focus ? { at: focus.at, until: focus.at + 70, target: focus.target, dimOpacity: 0.68 } : undefined
   };
@@ -490,20 +707,20 @@ const saveToProject = async (rel, content) => {
 // 一键保存到项目 (本地直接写入，云端自动下载)
 document.getElementById('btn-save-project').onclick = async () => {
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
+  const targetScript = currentTab === 'tech' ? 'scripts/tech-chip.json' : 'scripts/vox-script.json';
   try {
-    await saveToProject('scripts/vox-script.json', jsonStr);
-    toast('✔ 已直接保存到项目: public/scripts/vox-script.json');
+    await saveToProject(targetScript, jsonStr);
+    toast(`✔ 已保存到项目: public/${targetScript}`);
   } catch (_) {
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `vox-script.json`;
+    a.download = targetScript.split('/')[1];
     a.click();
-    toast('已生成 vox-script.json 下载');
+    toast(`已下载 ${targetScript.split('/')[1]} 文件`);
   }
 };
 
-// 复制与下载
 document.getElementById('btn-copy').onclick = async () => {
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
   await navigator.clipboard.writeText(jsonStr);
@@ -512,16 +729,17 @@ document.getElementById('btn-copy').onclick = async () => {
 
 document.getElementById('btn-download').onclick = () => {
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
+  const targetScript = currentTab === 'tech' ? 'tech-chip.json' : 'vox-script.json';
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `vox-script-${Date.now()}.json`;
+  a.download = targetScript;
   a.click();
-  toast('已下载独立 JSON 文件');
+  toast(`已下载 ${targetScript}`);
 };
 
 // -------------------------------------------------------------
-// 在线 60fps 实时运镜与手绘渲染模拟器 (Live Motion Canvas)
+// 在线 60fps 实时运镜与渲染模拟器
 // -------------------------------------------------------------
 let isPlaying = false, animFrameId = null, currentFrame = 0;
 const canvas = document.getElementById('preview-canvas');
@@ -532,7 +750,9 @@ const timeEl = document.getElementById('player-time');
 
 document.getElementById('btn-preview').onclick = () => {
   if (!imgW || !currentImgElement) return toast('请先上传或加载图片');
-  const maxAt = anns.length ? Math.max(...anns.map(a => a.at)) : 0;
+  const maxAt = currentTab === 'tech'
+    ? (techCallouts.length ? Math.max(...techCallouts.map(c => c.at)) : 0)
+    : (anns.length ? Math.max(...anns.map(a => a.at)) : 0);
   const totalFrames = Math.max(300, maxAt + 60);
   seek.max = totalFrames;
   modal.style.display = 'flex';
@@ -548,69 +768,69 @@ document.getElementById('btn-close-modal').onclick = () => {
   cancelAnimationFrame(animFrameId);
 };
 
-document.getElementById('btn-play-pause').onclick = (e) => {
-  isPlaying = !isPlaying;
-  e.target.textContent = isPlaying ? '暂停' : '播放';
-  if (isPlaying) {
-    lastTime = performance.now();
-    playLoop();
+let lastTime = 0;
+let playbackSpeed = 1.0;
+document.getElementById('speed-select').onchange = (e) => {
+  playbackSpeed = parseFloat(e.target.value) || 1.0;
+};
+
+function playLoop() {
+  if (!isPlaying) return;
+  const now = performance.now();
+  const delta = (now - lastTime);
+  const frameDuration = (1000 / 30) / playbackSpeed;
+
+  if (delta >= frameDuration) {
+    const framesToAdvance = Math.floor(delta / frameDuration);
+    currentFrame += framesToAdvance;
+    lastTime = now - (delta % frameDuration);
+
+    if (currentFrame > parseInt(seek.max)) {
+      currentFrame = 0;
+    }
+    seek.value = currentFrame;
+    updateTimeText(currentFrame);
+    renderCanvasFrame(currentFrame);
   }
+
+  animFrameId = requestAnimationFrame(playLoop);
+}
+
+seek.oninput = (e) => {
+  currentFrame = parseInt(e.target.value);
+  updateTimeText(currentFrame);
+  renderCanvasFrame(currentFrame);
+};
+
+function updateTimeText(f) {
+  const curS = Math.floor(f / 30);
+  const maxS = Math.floor(seek.max / 30);
+  timeEl.textContent = `${String(Math.floor(curS/60)).padStart(2,'0')}:${String(curS%60).padStart(2,'0')} / ${String(Math.floor(maxS/60)).padStart(2,'0')}:${String(maxS%60).padStart(2,'0')}`;
+}
+
+document.getElementById('btn-play-pause').onclick = () => {
+  isPlaying = !isPlaying;
+  document.getElementById('btn-play-pause').textContent = isPlaying ? '暂停' : '播放';
+  if (isPlaying) { lastTime = performance.now(); playLoop(); }
 };
 
 document.getElementById('btn-restart').onclick = () => {
   currentFrame = 0;
+  seek.value = 0;
   isPlaying = true;
-  lastTime = performance.now();
   document.getElementById('btn-play-pause').textContent = '暂停';
+  lastTime = performance.now();
   playLoop();
 };
 
-document.getElementById('speed-select').onchange = (e) => {
-  playbackSpeed = parseFloat(e.target.value) || 1.0;
-  lastTime = performance.now();
-};
+function renderCanvasFrame(frame) {
+  ctx.clearRect(0, 0, 1920, 1080);
 
-seek.oninput = (e) => {
-  currentFrame = parseInt(e.target.value);
-  renderFrame(currentFrame);
-};
-
-let playbackSpeed = 1.0;
-let lastTime = 0;
-
-function playLoop(currentTime) {
-  if (!isPlaying) return;
-  if (!currentTime) currentTime = performance.now();
-  if (!lastTime) lastTime = currentTime;
-
-  const delta = currentTime - lastTime;
-  const targetInterval = (1000 / 30) / playbackSpeed;
-
-  if (delta >= targetInterval) {
-    const framesToAdvance = Math.floor(delta / targetInterval);
-    lastTime = currentTime - (delta % targetInterval);
-    const totalFrames = parseInt(seek.max);
-    currentFrame += framesToAdvance;
-    if (currentFrame > totalFrames) currentFrame = 0;
-    seek.value = currentFrame;
-    renderFrame(currentFrame);
-  }
-  animFrameId = requestAnimationFrame(playLoop);
-}
-
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function renderFrame(frame) {
-  const totalFrames = parseInt(seek.max);
-  timeEl.textContent = `${(frame / 30).toFixed(1)}s / ${(totalFrames / 30).toFixed(1)}s`;
-
-  // 绘制背景质感
+  // 背景绘制
   if (curBgType === 'grid') {
-    const bgGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1000);
-    bgGrad.addColorStop(0, '#1a2233');
-    bgGrad.addColorStop(1, '#08090d');
+    const bgGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 960);
+    bgGrad.addColorStop(0, '#141a29');
+    bgGrad.addColorStop(1, '#07090d');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, 1920, 1080);
     ctx.strokeStyle = 'rgba(51, 65, 85, 0.28)';
@@ -621,58 +841,49 @@ function renderFrame(frame) {
     for (let y = 0; y <= 1080; y += 48) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1920, y); ctx.stroke();
     }
-  } else if (curBgType === 'blueprint') {
-    ctx.fillStyle = '#081b33';
-    ctx.fillRect(0, 0, 1920, 1080);
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= 1920; x += 32) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1080); ctx.stroke();
-    }
-    for (let y = 0; y <= 1080; y += 32) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1920, y); ctx.stroke();
-    }
-  } else if (curBgType === 'vignette') {
-    const bgGrad = ctx.createRadialGradient(960, 540, 80, 960, 540, 1000);
-    bgGrad.addColorStop(0, '#1e2536');
-    bgGrad.addColorStop(1, '#06070a');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, 1920, 1080);
-  } else if (curBgType === 'paper') {
-    ctx.fillStyle = '#f2ece1';
-    ctx.fillRect(0, 0, 1920, 1080);
-  } else if (curBgType === 'noise') {
-    ctx.fillStyle = '#0d0f14';
-    ctx.fillRect(0, 0, 1920, 1080);
   } else {
-    ctx.fillStyle = '#0a0b0e';
+    ctx.fillStyle = '#07090d';
     ctx.fillRect(0, 0, 1920, 1080);
   }
 
   if (!currentImgElement) return;
 
-  // 计算相机轨迹
   const scale = 1920 / imgW;
   const docW = 1920, docH = imgH * scale;
 
-  let targetX = docW / 2, targetY = docH * 0.35, targetZoom = 1.0;
-  const sortedAnns = [...anns].sort((a, b) => a.at - b.at);
+  // 相机轨迹
+  let targetX = docW / 2, targetY = docH / 2, targetZoom = 1.0;
 
-  let curTarget = sortedAnns[0];
-  for (let a of sortedAnns) {
-    if (frame >= a.at - 15) curTarget = a;
-  }
-
-  if (curTarget) {
-    const cx = (curTarget.target.x + curTarget.target.width / 2) * scale;
-    const cy = (curTarget.target.y + curTarget.target.height / 2) * scale;
-    const isFocus = curTarget.action === 'focus';
-    const zoom = isFocus ? 1.95 : 1.45;
-    const p = Math.min(1, Math.max(0, (frame - (curTarget.at - 24)) / 24));
-    const smoothP = easeInOutCubic(p);
-    targetX = 960 * (1 - smoothP) + cx * smoothP;
-    targetY = (docH * 0.35) * (1 - smoothP) + cy * smoothP;
-    targetZoom = 0.9 * (1 - smoothP) + zoom * smoothP;
+  if (currentTab === 'tech') {
+    const sorted = [...techCallouts].sort((a, b) => a.at - b.at);
+    let curActive = sorted[0];
+    for (let c of sorted) {
+      if (frame >= c.at - 20) curActive = c;
+    }
+    if (curActive) {
+      const midX = (curActive.target[0] + curActive.cardPos[0] + 130) * scale / 2;
+      const midY = (curActive.target[1] + curActive.cardPos[1] + 40) * scale / 2;
+      const p = Math.min(1, Math.max(0, (frame - (curActive.at - 20)) / 22));
+      const smoothP = 1 - Math.pow(1 - p, 3);
+      targetX = (docW / 2) * (1 - smoothP) + midX * smoothP;
+      targetY = (docH / 2) * (1 - smoothP) + midY * smoothP;
+      targetZoom = 0.95 * (1 - smoothP) + 1.25 * smoothP;
+    }
+  } else {
+    const sortedAnns = [...anns].sort((a, b) => a.at - b.at);
+    let curTarget = sortedAnns[0];
+    for (let a of sortedAnns) {
+      if (frame >= a.at - 15) curTarget = a;
+    }
+    if (curTarget) {
+      const tx = (curTarget.target.x + curTarget.target.width / 2) * scale;
+      const ty = (curTarget.target.y + curTarget.target.height / 2) * scale;
+      const p = Math.min(1, Math.max(0, (frame - (curTarget.at - 15)) / 20));
+      const smoothP = 1 - Math.pow(1 - p, 3);
+      targetX = (docW / 2) * (1 - smoothP) + tx * smoothP;
+      targetY = (docH * 0.35) * (1 - smoothP) + ty * smoothP;
+      targetZoom = 1.0 * (1 - smoothP) + 1.45 * smoothP;
+    }
   }
 
   ctx.save();
@@ -680,104 +891,146 @@ function renderFrame(frame) {
   ctx.scale(targetZoom, targetZoom);
   ctx.translate(-targetX, -targetY);
 
-  // 绘制底图
   ctx.drawImage(currentImgElement, 0, 0, docW, docH);
 
-  // 绘制标注
-  sortedAnns.forEach(a => {
-    if (frame < a.at) return;
-    const localF = frame - a.at;
-    const dur = 18;
-    const progress = Math.min(1, localF / dur);
-    const smoothP = 1 - Math.pow(1 - progress, 3);
-    const tx = a.target.x * scale, ty = a.target.y * scale;
-    const tw = a.target.width * scale, th = a.target.height * scale;
-    const col = curTheme === 'dark' ? '#38bdf8' : '#1d4ed8';
-    const redCol = curTheme === 'dark' ? '#f87171' : '#dc2626';
-    const yelCol = curTheme === 'dark' ? '#fde047' : '#eab308';
+  // 绘制科技引线
+  if (currentTab === 'tech') {
+    techCallouts.forEach(c => {
+      if (frame < c.at) return;
+      const localF = frame - c.at;
+      const p = Math.min(1, localF / 20);
+      const smoothP = 1 - Math.pow(1 - p, 3);
 
-    ctx.save();
-    if (a.action === 'circle') {
-      ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineCap = 'round';
-      ctx.beginPath();
-      const r = Math.min(th / 2 + 10, 24);
-      if (tw / Math.max(1, th) > 1.4) {
-        // 圆润胶囊圆角 (宽文本圈选两端彻底告别尖锐)
-        ctx.roundRect(tx - 6, ty - 6, tw + 12, th + 12, r);
-      } else {
-        ctx.ellipse(tx + tw/2, ty + th/2, tw/2 + 10, th/2 + 8, -0.02, 0, Math.PI * 2 * smoothP);
-      }
-      ctx.stroke();
-    } else if (a.action === 'underline') {
-      ctx.strokeStyle = redCol; ctx.lineWidth = 5; ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(tx, ty + th + 4);
-      ctx.lineTo(tx + tw * smoothP, ty + th + 4);
-      ctx.stroke();
-    } else if (a.action === 'highlight') {
-      ctx.fillStyle = yelCol; ctx.globalAlpha = 0.55;
-      ctx.fillRect(tx, ty, tw * smoothP, th);
-    } else if (a.action === 'cross') {
-      ctx.strokeStyle = redCol; ctx.lineWidth = 6; ctx.lineCap = 'round';
-      const p1 = Math.min(1, smoothP * 1.7);
+      const tx = c.target[0] * scale, ty = c.target[1] * scale;
+      const cx = c.cardPos[0] * scale, cy = c.cardPos[1] * scale;
+      const isRight = cx >= tx;
+      const cardW = 240;
+      const connectX = isRight ? cx : cx + cardW;
+      const connectY = cy + 20;
+
+      const elbowX = tx + (isRight ? Math.abs(connectX - tx) * 0.5 : -Math.abs(connectX - tx) * 0.5);
+      const elbowY = ty + (connectY > ty ? Math.abs(connectX - tx) * 0.5 : -Math.abs(connectX - tx) * 0.5);
+
+      const col = c.colorTheme === 'amber' ? '#f59e0b' : (c.colorTheme === 'emerald' ? '#34d399' : '#38bdf8');
+
+      // 瞄准点
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+      const rPulse = (localF % 25) / 25 * 18 + 6;
+      ctx.beginPath(); ctx.arc(tx, ty, rPulse, 0, Math.PI*2); ctx.stroke();
+
+      // 折线
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(tx, ty);
-      ctx.lineTo(tx + tw * p1, ty + th * p1);
+      if (smoothP <= 0.5) {
+        const p1 = smoothP * 2;
+        ctx.lineTo(tx + (elbowX - tx) * p1, ty + (elbowY - ty) * p1);
+      } else {
+        const p2 = (smoothP - 0.5) * 2;
+        ctx.lineTo(elbowX, elbowY);
+        ctx.lineTo(elbowX + (connectX - elbowX) * p2, elbowY + (connectY - elbowY) * p2);
+      }
       ctx.stroke();
-      if (smoothP > 0.3) {
-        const p2 = Math.min(1, (smoothP - 0.3) * 1.43);
+
+      // 卡片
+      if (smoothP > 0.4) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1;
+        ctx.fillRect(cx, cy, cardW, 80);
+        ctx.strokeRect(cx, cy, cardW, 80);
+
+        ctx.fillStyle = col;
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`[${c.tag || 'CALLOUT'}]`, cx + 10, cy + 18);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(c.title || '', cx + 10, cy + 36);
+
+        if (c.metrics && c.metrics[0]) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '10px monospace';
+          ctx.fillText(`${c.metrics[0].label}: ${c.metrics[0].value}`, cx + 10, cy + 58);
+        }
+      }
+    });
+  } else {
+    // 绘制手绘纸张标注
+    anns.forEach(a => {
+      if (frame < a.at) return;
+      const localF = frame - a.at;
+      const dur = 18;
+      const progress = Math.min(1, localF / dur);
+      const smoothP = 1 - Math.pow(1 - progress, 3);
+      const tx = a.target.x * scale, ty = a.target.y * scale;
+      const tw = a.target.width * scale, th = a.target.height * scale;
+      const col = curTheme === 'dark' ? '#38bdf8' : '#1d4ed8';
+      const redCol = curTheme === 'dark' ? '#f87171' : '#dc2626';
+      const yelCol = curTheme === 'dark' ? '#fde047' : '#eab308';
+
+      if (a.action === 'circle') {
+        ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(tx + tw, ty);
-        ctx.lineTo(tx + tw - tw * p2, ty + th * p2);
+        const r = Math.min(th / 2 + 10, 24);
+        if (tw / Math.max(1, th) > 1.4) {
+          ctx.roundRect(tx - 6, ty - 6, tw + 12, th + 12, r);
+        } else {
+          ctx.ellipse(tx + tw/2, ty + th/2, tw/2 + 10, th/2 + 8, -0.02, 0, Math.PI * 2 * smoothP);
+        }
         ctx.stroke();
-      }
-    } else if (a.action === 'arrow') {
-      ctx.strokeStyle = col; ctx.lineWidth = 5.5; ctx.lineCap = 'round'; ctx.fillStyle = col;
-      ctx.beginPath();
-      ctx.moveTo(tx, ty + th / 2);
-      ctx.lineTo(tx + tw * smoothP, ty + th / 2);
-      ctx.stroke();
-      if (smoothP > 0.65) {
-        const headP = Math.min(1, (smoothP - 0.65) / 0.35);
-        const hx = tx + tw;
-        const hy = ty + th / 2;
+      } else if (a.action === 'highlight') {
+        ctx.fillStyle = yelCol; ctx.globalAlpha = 0.55;
+        ctx.fillRect(tx, ty, tw * smoothP, th);
+        ctx.globalAlpha = 1.0;
+      } else if (a.action === 'underline') {
+        ctx.strokeStyle = redCol; ctx.lineWidth = 5; ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(hx, hy);
-        ctx.lineTo(hx - 24 * headP, hy - 14 * headP);
-        ctx.lineTo(hx - 24 * headP, hy + 14 * headP);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(tx, ty + th + 4);
+        ctx.lineTo(tx + tw * smoothP, ty + th + 4);
+        ctx.stroke();
+      } else if (a.action === 'cross') {
+        ctx.strokeStyle = redCol; ctx.lineWidth = 6; ctx.lineCap = 'round';
+        const p1 = Math.min(1, smoothP * 1.7);
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx + tw * p1, ty + th * p1);
+        ctx.stroke();
+        if (smoothP > 0.3) {
+          const p2 = Math.min(1, (smoothP - 0.3) * 1.43);
+          ctx.beginPath();
+          ctx.moveTo(tx + tw, ty);
+          ctx.lineTo(tx + tw - tw * p2, ty + th * p2);
+          ctx.stroke();
+        }
+      } else if (a.action === 'arrow') {
+        ctx.strokeStyle = col; ctx.lineWidth = 5.5; ctx.lineCap = 'round'; ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty + th / 2);
+        ctx.lineTo(tx + tw * smoothP, ty + th / 2);
+        ctx.stroke();
+        if (smoothP > 0.65) {
+          const headP = Math.min(1, (smoothP - 0.65) / 0.35);
+          const hx = tx + tw;
+          const hy = ty + th / 2;
+          ctx.beginPath();
+          ctx.moveTo(hx, hy);
+          ctx.lineTo(hx - 24 * headP, hy - 14 * headP);
+          ctx.lineTo(hx - 24 * headP, hy + 14 * headP);
+          ctx.closePath();
+          ctx.fill();
+        }
       }
-    } else if (a.action === 'wavy') {
-      ctx.strokeStyle = curTheme === 'dark' ? '#fb7185' : '#f43f5e'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-      ctx.beginPath();
-      const waveLen = 14;
-      const endX = tx + tw * smoothP;
-      for (let x = tx; x <= endX; x += 2) {
-        const waveY = ty + th + 4 + Math.sin((x - tx) / waveLen * Math.PI * 2) * 3.5;
-        if (x === tx) ctx.moveTo(x, waveY);
-        else ctx.lineTo(x, waveY);
-      }
-      ctx.stroke();
-    } else if (a.action === 'box') {
-      ctx.strokeStyle = col; ctx.lineWidth = 5;
-      ctx.strokeRect(tx, ty, tw, th);
-    } else if (a.action === 'focus') {
-      ctx.fillStyle = 'rgba(0,0,0,0.68)';
-      // 遮罩四周
-      ctx.fillRect(-2000, -2000, 6000, ty + 2000);
-      ctx.fillRect(-2000, ty + th, 6000, 4000);
-      ctx.fillRect(-2000, ty, tx + 2000, th);
-      ctx.fillRect(tx + tw, ty, 4000, th);
-    }
-    ctx.restore();
-  });
+    });
+  }
 
   ctx.restore();
 }
 
-// 初始默认加载 hockey-page 示例
-loadImgFromSrc('screenshots/hockey-page.png', 'hockey-page.png');
+// 默认加载 VOX Demo
+loadImgFromSrc('screenshots/hockey-page.png');
 </script>
 </body>
 </html>
