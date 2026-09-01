@@ -175,7 +175,12 @@
       <button class="tab-btn disabled" title="正在开发中">4. 全屏文字击打 (SOON)</button>
     </div>
 
-    <div style="font-size:11px;color:#64748b;">Remotion 60FPS 内核</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <a id="btn-top-studio" href="/studio/" target="_blank" style="background:#7c3aed;color:#fff;text-decoration:none;padding:5px 12px;border-radius:4px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;transition:background .15s;">
+        <span>▶ 打开 Remotion 电影级播放器 (全功能)</span>
+      </a>
+      <span style="font-size:11px;color:#64748b;">Remotion 60FPS 内核</span>
+    </div>
   </div>
 
   <!-- 2. 主工作区 -->
@@ -1027,6 +1032,16 @@ function renderCanvasFrame(frame) {
   }
 
   ctx.restore();
+}
+
+// 动态适配 Remotion Studio 跳转地址
+const studioBtn = document.getElementById('btn-top-studio');
+if (window.location.port === '3008') {
+  studioBtn.href = 'http://localhost:3000';
+} else if (window.location.hostname === '43.128.118.251') {
+  studioBtn.href = 'http://43.128.118.251:3000';
+} else {
+  studioBtn.href = '/studio/';
 }
 
 // 默认加载 VOX Demo
