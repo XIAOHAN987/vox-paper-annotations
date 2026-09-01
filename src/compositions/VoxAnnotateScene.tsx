@@ -414,10 +414,19 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
             transformOrigin: "0 0",
           }}
         >
-          <Img
-            src={staticFile(dImage)}
-            style={{ width: doc.w, height: doc.h, display: "block" }}
-          />
+          {(() => {
+            const isRemoteOrData =
+              dImage.startsWith("http://") ||
+              dImage.startsWith("https://") ||
+              dImage.startsWith("data:");
+            const imageSrc = isRemoteOrData ? dImage : staticFile(dImage);
+            return (
+              <Img
+                src={imageSrc}
+                style={{ width: doc.w, height: doc.h, display: "block" }}
+              />
+            );
+          })()}
 
           {dAnns.map((a, i) => {
             const t = {
