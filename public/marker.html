@@ -696,7 +696,8 @@ function buildJSON() {
 
 const saveToProject = async (rel, content) => {
   try {
-    const res = await fetch('/api/save', {
+    const prefix = window.location.pathname.startsWith('/vox') ? '/vox' : '';
+    const res = await fetch(`${prefix}/api/save`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: rel, content: JSON.parse(content) }),
@@ -709,13 +710,13 @@ const saveToProject = async (rel, content) => {
   throw new Error('no-api');
 };
 
-// 一键保存到项目 (本地直接写入，云端自动下载)
+// 一键保存到项目 (本地与服务器均直接写入，Remotion 实时热更新)
 document.getElementById('btn-save-project').onclick = async () => {
   const jsonStr = JSON.stringify(buildJSON(), null, 2);
   const targetScript = currentTab === 'tech' ? 'scripts/tech-chip.json' : 'scripts/vox-script.json';
   try {
     await saveToProject(targetScript, jsonStr);
-    toast(`✔ 已保存到项目: public/${targetScript}`);
+    toast(`✔ 已同步到项目！点击右上角【Remotion 播放器】即刻查看大片`);
   } catch (_) {
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const a = document.createElement('a');
