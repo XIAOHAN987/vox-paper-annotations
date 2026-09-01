@@ -21,6 +21,7 @@ import { VoxBox } from "../components/vox/VoxBox";
 import { VoxFocusCallout } from "../components/vox/VoxFocusCallout";
 import { VoxPaperOverlay } from "../components/vox/VoxPaperOverlay";
 import { docFit } from "../components/vox/docFit";
+import { StudioExportButton } from "../components/vox/StudioExportButton";
 
 const pointSchema = z.tuple([z.number(), z.number()]);
 
@@ -676,6 +677,9 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
           blendMode="overlay"
           vignette
         />
+
+        {/* Studio 悬浮极速导出视频按钮 (仅在浏览器交互模式下显示) */}
+        <StudioExportButton props={data} durationInFrames={durationInFrames} />
       </AbsoluteFill>
     </VoxFilterProvider>
   );
