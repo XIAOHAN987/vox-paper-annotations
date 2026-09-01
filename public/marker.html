@@ -238,8 +238,9 @@
           <span style="font-size:11px;color:#94a3b8;">节奏预设:</span>
           <select id="pace-select" style="flex:1;background:#0f172a;color:#38bdf8;border:1px solid #334155;padding:4px 6px;border-radius:4px;font-size:11px;font-weight:600;outline:none;cursor:pointer;">
             <option value="35">紧凑短视频 (35帧 / 1.1s)</option>
-            <option value="50" selected>标准从容 (50帧 / 1.6s)</option>
-            <option value="80">慢速口播 (80帧 / 2.6s)</option>
+            <option value="45" selected>VOX 原版经典 (45帧 / 1.5s)</option>
+            <option value="60">标准从容 (60帧 / 2.0s)</option>
+            <option value="90">慢速口播 (90帧 / 3.0s)</option>
           </select>
         </div>
       </header>
@@ -571,11 +572,11 @@ wrap.onmousedown = (e) => {
   };
 };
 
-let paceInterval = 50;
+let paceInterval = 45;
 const paceSelect = document.getElementById('pace-select');
 if (paceSelect) {
   paceSelect.onchange = (e) => {
-    paceInterval = parseInt(e.target.value) || 50;
+    paceInterval = parseInt(e.target.value) || 45;
     toast(`已切换节奏: 进场间隔 ${paceInterval} 帧 (${(paceInterval/30).toFixed(1)}s)`);
   };
 }
