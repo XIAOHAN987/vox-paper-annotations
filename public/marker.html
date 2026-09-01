@@ -164,15 +164,8 @@
   <!-- 1. 顶部模板切换总线 -->
   <div id="top-bar">
     <div class="brand-title">
-      <span>动效生产超级工作台</span>
+      <span>VOX 纸张手绘标注工作台</span>
       <span class="brand-badge">PRO V2.0</span>
-    </div>
-
-    <div class="template-tabs">
-      <button class="tab-btn active" data-tab="vox">1. VOX 纸张标注</button>
-      <button class="tab-btn" data-tab="tech">2. CAD 科技引线</button>
-      <button class="tab-btn disabled" title="正在开发中">3. 决策标尺 (SOON)</button>
-      <button class="tab-btn disabled" title="正在开发中">4. 全屏文字击打 (SOON)</button>
     </div>
 
     <div style="display:flex;align-items:center;gap:10px;">
@@ -204,7 +197,6 @@
         <div style="display:flex;gap:6px;margin-bottom:8px;">
           <input id="img-path" list="known-images" placeholder="或输入路径/URL" style="flex:1;background:#0f172a;border:1px solid #334155;color:#f8fafc;padding:5px 8px;border-radius:4px;font-size:12px;">
           <datalist id="known-images">
-            <option value="screenshots/tech-chip.svg"></option>
             <option value="screenshots/hockey-page.png"></option>
             <option value="textures/newspaper.jpg"></option>
           </datalist>
@@ -252,11 +244,6 @@
         <button data-t="cross">打叉</button>
         <button data-t="box-tool">方框</button>
         <button data-t="focus">聚焦</button>
-      </div>
-
-      <!-- 科技引线工具提示 -->
-      <div id="tech-tools-row" style="display:none;padding:10px 16px;background:#0b0e14;border-bottom:1px solid #1e293b;">
-        <button id="btn-add-callout" style="width:100%;padding:7px;background:#0284c7;color:#fff;border:none;border-radius:4px;font-weight:700;font-size:12px;cursor:pointer;">+ 新增 CAD 科技引线锚点</button>
       </div>
 
       <div id="list"></div>
