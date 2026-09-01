@@ -2,10 +2,16 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawn } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
+const RENDERS_DIR = path.join(PUBLIC_DIR, "renders");
 const PORT = 3008;
+
+if (!fs.existsSync(RENDERS_DIR)) {
+  fs.mkdirSync(RENDERS_DIR, { recursive: true });
+}
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -16,7 +22,11 @@ const MIME_TYPES = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
 };
+
+let currentRenderProcess = null;
 
 const server = http.createServer((req, res) => {
   // CORS
@@ -56,6 +66,94 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
     });
+    return;
+  }
+
+  // 工业级原生 Remotion 离线像素无损渲染 API (SSE 实时进度流)
+  if (req.url.startsWith("/api/render")) {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+
+    const sendEvent = (event, data) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    sendEvent("status", { progress: 5, message: "正在启动 Remotion 渲染内核..." });
+
+    const outFileName = `vox-render-${Date.now()}.mp4`;
+    const outFilePath = path.join(RENDERS_DIR, outFileName);
+
+    const isWin = process.platform === "win32";
+    const npxCmd = isWin ? "npx.cmd" : "npx";
+    const args = [
+      "remotion",
+      "render",
+      "src/index.ts",
+      "VOX-纸张手绘标注",
+      `public/renders/${outFileName}`,
+      "--overwrite",
+    ];
+
+    const renderProc = spawn(npxCmd, args, {
+      cwd: __dirname,
+      shell: isWin,
+    });
+    currentRenderProcess = renderProc;
+
+    let maxFrames = 300;
+    let currentRendered = 0;
+
+    renderProc.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      const match = text.match(/Rendered (\d+)\/(\d+)/);
+      if (match) {
+        currentRendered = parseInt(match[1], 10);
+        maxFrames = parseInt(match[2], 10) || maxFrames;
+        const pct = Math.min(95, Math.round((currentRendered / maxFrames) * 90) + 5);
+        sendEvent("progress", {
+          progress: pct,
+          message: `正在无损渲染第 ${currentRendered}/${maxFrames} 帧 (${pct}%)`,
+        });
+      } else if (text.includes("Encoded")) {
+        sendEvent("progress", { progress: 98, message: "正在压制 H.264 母带音频与视频轨..." });
+      }
+    });
+
+    renderProc.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      const match = text.match(/Rendered (\d+)\/(\d+)/);
+      if (match) {
+        currentRendered = parseInt(match[1], 10);
+        maxFrames = parseInt(match[2], 10) || maxFrames;
+        const pct = Math.min(95, Math.round((currentRendered / maxFrames) * 90) + 5);
+        sendEvent("progress", {
+          progress: pct,
+          message: `正在无损渲染第 ${currentRendered}/${maxFrames} 帧 (${pct}%)`,
+        });
+      }
+    });
+
+    renderProc.on("close", (code) => {
+      currentRenderProcess = null;
+      if (code === 0 && fs.existsSync(outFilePath)) {
+        sendEvent("complete", {
+          progress: 100,
+          url: `/vox/renders/${outFileName}`,
+          directUrl: `/renders/${outFileName}`,
+          fileName: outFileName,
+          message: "渲染完成！",
+        });
+      } else {
+        sendEvent("error", {
+          message: `渲染失败 (退出码 ${code})，请检查配置`,
+        });
+      }
+      res.end();
+    });
+
     return;
   }
 
