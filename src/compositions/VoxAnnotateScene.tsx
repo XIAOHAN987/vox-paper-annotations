@@ -179,81 +179,42 @@ const autoCameraKeys = (
 
   events.sort((a, b) => a.at - b.at);
 
-  if (events.length === 0) {
-    return [
-      { at: 0, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 },
-      { at: totalFrames, x: imgW / 2, y: imgH * 0.45, zoom: 0.82 },
-    ];
-  }
-
-  const keys: CameraKey[] = [];
-
-  // 初始镜头: 开篇微远景
-  keys.push({ at: 0, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 });
+  const keys: CameraKey[] = [
+    { at: 0, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 },
+  ];
 
   for (let i = 0; i < events.length; i++) {
     const ev = events[i];
-    const prevEv = events[i - 1];
+    const nextEv = events[i + 1];
     const scale = 1920 / imgW;
 
     const idealZoom = ev.isFocus
       ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, ev.targetW * scale)))
       : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, ev.targetW * scale)));
 
-    // 1. 镜头必须在手绘笔迹生长前 6 帧稳稳到达并停住！
-    const targetArrive = Math.max(1, ev.at - 6);
-
-    // 2. 计算从上一个机位起步的时间点
-    if (!prevEv) {
-      // 第一个标注: 从开篇 0 帧平滑滑行到 targetArrive
-      const travelFromStart = Math.min(targetArrive, 24);
-      const departStart = Math.max(0, targetArrive - travelFromStart);
-      if (departStart > 0) {
-        keys.push({ at: departStart, x: imgW / 2, y: imgH * 0.35, zoom: 0.88 });
-      }
-    } else {
-      // 上一个标注机位: 停留充分展示后，以黄金比例平滑滑向下一个目标
-      const gap = ev.at - prevEv.at;
-      const travelFrames = Math.max(16, Math.min(32, Math.round(gap * 0.36)));
-      const departAt = Math.max(prevEv.at + 12, targetArrive - travelFrames);
-
-      const prevIdealZoom = prevEv.isFocus
-        ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, prevEv.targetW * scale)))
-        : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, prevEv.targetW * scale)));
-
-      keys.push({
-        at: departAt,
-        x: prevEv.cx,
-        y: prevEv.cy + (prevEv.isFocus ? 5 : 3),
-        zoom: prevIdealZoom * (prevEv.isFocus ? 1.03 : 1.02),
-      });
-    }
-
-    // 3. 当前机位就位点 (提前 6 帧绝对稳固就绪)
+    // 1. 镜头提前 6 帧稳稳到达并停住
+    const arriveAt = Math.max(1, ev.at - 6);
     keys.push({
-      at: targetArrive,
+      at: arriveAt,
       x: ev.cx,
       y: ev.cy,
       zoom: idealZoom,
     });
-  }
 
-  // 最后一个标注结束后的收尾
-  const lastEv = events[events.length - 1];
-  if (lastEv) {
-    const scale = 1920 / imgW;
-    const lastIdealZoom = lastEv.isFocus
-      ? Math.min(2.25, Math.max(1.8, (1920 * 0.72) / Math.max(180, lastEv.targetW * scale)))
-      : Math.min(1.7, Math.max(1.35, (1920 * 0.55) / Math.max(200, lastEv.targetW * scale)));
-    
-    // 最后一个标注画完后，在特写处停留约 16 帧供观众清晰阅读
-    const endHold = Math.min(totalFrames - 22, lastEv.at + 24);
-    if (endHold > lastEv.at) {
+    // 2. 原版核心精髓: 到位后稳固停顿 + 沉浸呼吸微推 (Rock-solid Settle & Hold)
+    const nextArrive = nextEv ? Math.max(1, nextEv.at - 6) : totalFrames - 24;
+    const gap = nextArrive - arriveAt;
+    const travelToNext = Math.max(16, Math.min(28, Math.round(gap * 0.35)));
+
+    // 停顿保持点: 留出后置位移时间，其余时间全部稳稳锁定在当前特写
+    const holdEnd = Math.min(nextArrive - travelToNext, Math.max(ev.at + 25, arriveAt + 18));
+
+    if (holdEnd > arriveAt + 2) {
       keys.push({
-        at: endHold,
-        x: lastEv.cx,
-        y: lastEv.cy + 4,
-        zoom: lastIdealZoom * 1.02,
+        at: holdEnd,
+        x: ev.cx,
+        y: ev.cy + (ev.isFocus ? 10 : 6),
+        zoom: idealZoom * (ev.isFocus ? 1.04 : 1.025),
       });
     }
   }
@@ -272,7 +233,7 @@ const autoCameraKeys = (
     const last = cleanKeys[cleanKeys.length - 1];
     if (!last) {
       cleanKeys.push(k);
-    } else if (k.at > last.at + 2) {
+    } else if (k.at > last.at + 1) {
       cleanKeys.push(k);
     } else {
       cleanKeys[cleanKeys.length - 1] = k;
@@ -365,8 +326,8 @@ export const VoxAnnotateScene: React.FC<VoxAnnotateProps> = (props) => {
 
   const cam = useMemo(() => {
     const frames = keys.map((k) => k.at);
-    // 电影级极柔缓动曲线 (近似重型机械臂平滑启停物理)
-    const easing = Easing.bezier(0.25, 0.1, 0.25, 1.0);
+    // 原版经典平滑 cubic 缓动 (在每个就位与停顿点切线平整，稳如泰山)
+    const easing = Easing.inOut(Easing.cubic);
     const fx = interpolate(frame, frames, keys.map((k) => k.x), {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
