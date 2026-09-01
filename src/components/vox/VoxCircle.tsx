@@ -14,7 +14,6 @@ export const VoxCircle: React.FC<VoxCircleProps> = ({
   delayInFrames = 0,
   durationInFrames = 26,
   rotation = -2,
-  loops = 1,
   boiled = true,
   blendMode,
   theme,
