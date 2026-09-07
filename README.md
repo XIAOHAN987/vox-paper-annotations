@@ -1,4 +1,4 @@
-﻿# VOX Paper Annotation Suite for Remotion
+# VOX Paper Annotation Suite for Remotion
 
 基于 Remotion 与 React 构建的纪录片风格纸张手绘标注系统与可视化打标工作台。专为知识科普、商业分析、新闻解读与深度报道类视频设计，呈现原汁原味的墨水毛边、动态纸张微噪点与从容平滑的 Ken Burns 运镜。
 
@@ -65,7 +65,7 @@ npx remotion render src/index.ts VOX-纸张手绘标注 out/vox-video.mp4
 
 ## 致谢 (Acknowledgments)
 
-本项目核心动效与视觉设计思路来自于 YouTube 创作者 **Chris Moran**。特此致谢！
+本项目视觉风格与动效灵感参考了 YouTube 创作者 **Chris Moran** 的 After Effects 教程；本项目在其视觉思路启发下，采用 **React + Remotion 与程序化 SVG 滤镜** 进行了全代码化重构与独立实现，并拓展了零代码可视化打标工作台。特此致谢！
 
 ---
 
